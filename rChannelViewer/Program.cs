@@ -4,7 +4,18 @@ class Program {
     static void Main() {
         Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
         Raylib.InitWindow(800,600,"rChannelViewer");
+        Raylib.SetTargetFPS(120);
+        GenerateBackgroundTexture();
 
+        while (!Raylib.WindowShouldClose()) {
+            Raylib.BeginDrawing();
+            //Raylib.ClearBackground(Color.DarkGray);
+            DrawBackground();
+            Raylib.EndDrawing();
+        }
+    }
+
+    private static void GenerateBackgroundTexture() {
         Color bgColor1 = Raylib.GetColor(0x0c1021ff);
         Color bgColor2 = Raylib.GetColor(0x192247ff);
 
@@ -19,13 +30,6 @@ class Program {
         }
 
         BackgroundTexture = Raylib.LoadTextureFromImage(bgImg);
-        
-        while (!Raylib.WindowShouldClose()) {
-            Raylib.BeginDrawing();
-            Raylib.ClearBackground(Color.DarkGray);
-            DrawBackground();
-            Raylib.EndDrawing();
-        }
     }
 
     private static Texture2D BackgroundTexture;
