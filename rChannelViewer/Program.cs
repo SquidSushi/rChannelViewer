@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 
 namespace rChannelViewer;
 
@@ -18,7 +19,8 @@ static class Program {
     static RenderTexture2D _magnifiedRenderTexture;
     private static bool _enableMagnifiedView = true;
     static Image _image;
-
+    
+    
 
     static Camera2D _cam = new Camera2D() {
         Offset = new Vector2(0, 0),
@@ -35,7 +37,7 @@ static class Program {
         GenerateBackgroundTexture();
         LoadDefaultTexture();
         _magnifiedRenderTexture = Raylib.LoadRenderTexture(8 * 15, 8 * 15);
-
+        
         // Check if a file path is passed as an argument
         if (args.Length > 0) {
             string filePath = args[0];
