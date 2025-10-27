@@ -6,10 +6,24 @@
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <UseWindowsForms>true</UseWindowsForms>
+        <ApplicationIcon>icon.ico</ApplicationIcon>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="Raylib-cs" Version="7.0.2" />
     </ItemGroup>
+
+  <ItemGroup>
+    <None Include="icon.ico">
+      <Visible>true</Visible>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </None>
+    <None Include="icon.png">
+      <Visible>true</Visible>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>

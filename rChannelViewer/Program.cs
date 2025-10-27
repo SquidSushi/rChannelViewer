@@ -42,13 +42,17 @@ static class Program {
 
 
     static void Main(string[] args) {
-        Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
+        Raylib.SetConfigFlags(ConfigFlags.ResizableWindow | ConfigFlags.Msaa4xHint);
         Raylib.InitWindow(1280, 720, $"rChannelViewer v{GetBuildInfo()}");
+        Image icon = Raylib.LoadImage("icon.png");
+        Raylib.SetWindowIcon(icon);
+        //Raylib.UnloadImage(icon);
         // Embed build info (version or build datetime) into the window title
         Raylib.SetTargetFPS(120);
         GenerateBackgroundTexture();
         LoadDefaultTexture();
         _magnifiedRenderTexture = Raylib.LoadRenderTexture(8 * 15, 8 * 15);
+        
 
         // Check if a file path is passed as an argument
         if (args.Length > 0) {
@@ -76,25 +80,13 @@ static class Program {
 
     // Helper: try to return assembly version or fallback to assembly file last-write timestamp
     private static string GetBuildInfo() {
-        try {
-            var asm = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
-            if (asm != null) {
-                var version = asm.GetName().Version;
-                if (version != null && !string.IsNullOrEmpty(version.ToString())) {
-                    return version.ToString();
-                }
-                var loc = asm.Location;
-                if (!string.IsNullOrEmpty(loc) && File.Exists(loc)) {
-                    var dt = File.GetLastWriteTimeUtc(loc).ToLocalTime();
-                    return dt.ToString("yyyy-MM-dd HH:mm");
-                }
-            }
-        }
-        catch {
-            // swallow and fallback to current time
-        }
-        return DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+        var asm = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
+        var loc = asm.Location;
+
+        var dt = File.GetLastWriteTimeUtc(loc).ToLocalTime();
+        return dt.ToString("yyyy-MM-dd HH:mm");
     }
+
 
     private static void UpdateSelectedColorFormat() {
         if (Raylib.IsKeyPressed(KeyboardKey.Down)) {
@@ -191,10 +183,9 @@ static class Program {
             Raylib.GetColor(0x000088FF),
             Color.Black
         };
-        Raylib.DrawRectangleRounded(
-            new(Raylib.GetScreenWidth() / 2 - 100, Raylib.GetScreenHeight() - barHeight, 200, barHeight),
-            1f, 5,
-            channelColors[_channelMode]);
+        Raylib.DrawRectanglePro(
+            new(Raylib.GetScreenWidth() / 2 - 100, Raylib.GetScreenHeight() - barHeight, 200, barHeight), Vector2.Zero, 
+            0,channelColors[_channelMode]);
         var topMargin = Raylib.GetScreenHeight() - 30;
         const float infoUnit = 50;
         const float fontSize = 20;
@@ -217,6 +208,7 @@ static class Program {
         Raylib.DrawText(coordText,
             Raylib.GetScreenWidth() / 2 - Raylib.MeasureText(coordText, (int)fontSize) / 2, (int)topMargin,
             (int)fontSize, Color.White);
+        //Raylib.DrawCircle(10,10,50,Color.Red);
     }
 
     private static void DrawMagnifiedView(float barHeight, Color pixelColor) {
@@ -333,6 +325,7 @@ static class Program {
                 MessageBoxIcon.Error);
             return;
         }
+
         Image redChannelImage = Raylib.ImageCopy(fullTextureImage);
         Image greenChannelImage = Raylib.ImageCopy(fullTextureImage);
         Image blueChannelImage = Raylib.ImageCopy(fullTextureImage);
