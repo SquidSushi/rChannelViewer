@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Numerics;
 using System.Windows.Forms;
+using System.IO;
+using System.Reflection;
 
 namespace rChannelViewer;
 
@@ -41,7 +43,8 @@ static class Program {
 
     static void Main(string[] args) {
         Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
-        Raylib.InitWindow(1280, 720, "rChannelViewer");
+        Raylib.InitWindow(1280, 720, $"rChannelViewer v{GetBuildInfo()}");
+        // Embed build info (version or build datetime) into the window title
         Raylib.SetTargetFPS(120);
         GenerateBackgroundTexture();
         LoadDefaultTexture();
@@ -69,6 +72,28 @@ static class Program {
             // Drawing
             Draw();
         }
+    }
+
+    // Helper: try to return assembly version or fallback to assembly file last-write timestamp
+    private static string GetBuildInfo() {
+        try {
+            var asm = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
+            if (asm != null) {
+                var version = asm.GetName().Version;
+                if (version != null && !string.IsNullOrEmpty(version.ToString())) {
+                    return version.ToString();
+                }
+                var loc = asm.Location;
+                if (!string.IsNullOrEmpty(loc) && File.Exists(loc)) {
+                    var dt = File.GetLastWriteTimeUtc(loc).ToLocalTime();
+                    return dt.ToString("yyyy-MM-dd HH:mm");
+                }
+            }
+        }
+        catch {
+            // swallow and fallback to current time
+        }
+        return DateTime.Now.ToString("yyyy-MM-dd HH:mm");
     }
 
     private static void UpdateSelectedColorFormat() {
