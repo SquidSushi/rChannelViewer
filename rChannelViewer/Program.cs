@@ -8,6 +8,7 @@ static class Program {
     static Texture2D _backgroundTexture;
     static int _channelMode = 0;
     static Texture2D[] _channels = new Texture2D[5];
+    private static Image _image;
     // O <- Full image
     // 1 <- Red
     // 2 <- Green
@@ -20,6 +21,7 @@ static class Program {
         Zoom = 1
     };
     
+    
     static void Main() {
         Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
         Raylib.InitWindow(800,600,"rChannelViewer");
@@ -28,7 +30,7 @@ static class Program {
         LoadDefaultTexture();
 
         // for testing purposes I'm actually loading an image here.
-        LoadNewTexture("Zygarde.jpg");
+        LoadNewTexture("Zygarde.jpg"); //TODO remove test image load
         
         
         
@@ -81,9 +83,16 @@ static class Program {
         Raylib.BeginDrawing();
         DrawBackground();
         Raylib.BeginMode2D(_cam);
-        Raylib.DrawTexture(_channels[0],0,0,Color.White);
+        Raylib.DrawTexture(_channels[_channelMode],0,0,Color.White);
         Raylib.EndMode2D();
+        DrawUI();
+        Raylib.DrawFPS(10,10);
         Raylib.EndDrawing();
+    }
+
+    private static void DrawUI() {
+        // Draw a Gray Rectangle that's 40 pixels high at the bottom of the screen
+        Raylib.DrawRectangle(0,Raylib.GetScreenHeight()-40,Raylib.GetScreenWidth(),40,Color.DarkGray);
     }
 
     static void GenerateBackgroundTexture() {
@@ -103,6 +112,9 @@ static class Program {
         Raylib.UnloadImage(bgImg);
     }
 
+    static Vector2 GetPixelUnderMouse() {
+        return Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), _cam);;
+    }
     
     static void DrawBackground() {
         // This function draws diagonal stripes in the background.
@@ -136,23 +148,24 @@ static class Program {
         _channels[2] = Raylib.LoadTextureFromImage(greenChannelImage);
         _channels[3] = Raylib.LoadTextureFromImage(blueChannelImage);
         _channels[4] = Raylib.LoadTextureFromImage(alphaChannelImage);
-        Raylib.UnloadImage(fullTextureImage);
+        Raylib.UnloadImage(_image);
+        _image = fullTextureImage;
         Raylib.UnloadImage(redChannelImage);
         Raylib.UnloadImage(greenChannelImage);
         Raylib.UnloadImage(blueChannelImage);
         Raylib.UnloadImage(alphaChannelImage);
+        _cam.Target = new Vector2(fullTextureImage.Width/2, fullTextureImage.Height/2);
     }
 
     static void LoadDefaultTexture() {
         Image fauxFullTexture = Raylib.GenImageColor(100, 100, Color.Blank);
         Image fauxChannelTexture = Raylib.GenImageColor(100, 100, Color.Black);
-
+        _image = fauxChannelTexture;
         _channels[0] = Raylib.LoadTextureFromImage(fauxFullTexture);
         _channels[1] = Raylib.LoadTextureFromImage(fauxChannelTexture);
         _channels[2] = Raylib.LoadTextureFromImage(fauxChannelTexture);
         _channels[3] = Raylib.LoadTextureFromImage(fauxChannelTexture);
         _channels[4] = Raylib.LoadTextureFromImage(fauxChannelTexture);
-        Raylib.UnloadImage(fauxChannelTexture);
         Raylib.UnloadImage(fauxFullTexture);
     }
 }
