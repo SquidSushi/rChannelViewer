@@ -79,7 +79,7 @@ static class Program {
         // Zoom
         const float sqrt2 = 1.41421356f;
         _cam.Offset = Raylib.GetScreenCenter();
-        if (_cam.Zoom < 16f && Raylib.GetMouseWheelMove() > 0) {
+        if (_cam.Zoom <= 30.0f && Raylib.GetMouseWheelMove() > 0) {
             _cam.Target = GetPixelUnderMouse();
             _cam.Zoom *= sqrt2;
             // Adjust target so that the pixel under the mouse remains the same
@@ -138,7 +138,7 @@ static class Program {
         if (_enableMagnifiedView) {
             DrawMagnifiedView(barHeight, pixelColor);
         }
-        Raylib.DrawText(_cam.Zoom.ToString("F2"), 10, topMargin, (int)fontSize, Color.White);
+        Raylib.DrawText("x" + _cam.Zoom.ToString("F2"), 10, topMargin, (int)fontSize, Color.White);
     }
 
     private static void DrawMagnifiedView(float barHeight, Color pixelColor) {
