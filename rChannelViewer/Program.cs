@@ -95,12 +95,16 @@ static class Program {
         // Pan
         if (Raylib.IsMouseButtonDown(MouseButton.Left)) {
             Vector2 delta = Raylib.GetMouseDelta();
-            _cam.Target = _cam.Target - delta / _cam.Zoom;
+            _cam.Target -= delta / _cam.Zoom;
         }
         //Jump
         if (Raylib.IsMouseButtonPressed(MouseButton.Right)) {
             _cam.Target = GetPixelUnderMouse();
-            Raylib.SetMousePosition(Raylib.GetScreenWidth()/2, Raylib.GetScreenHeight()/2);
+            //Raylib.SetMousePosition(Raylib.GetScreenWidth()/2, Raylib.GetScreenHeight()/2);
+        }
+        // Recenter
+        if (Raylib.IsKeyPressed(KeyboardKey.Space)) {
+            _cam.Target = new(_image.Width/2, _image.Height/2);
         }
     }
 
@@ -119,29 +123,28 @@ static class Program {
         // Draw a Gray Rectangle that's 40 pixels high at the bottom of the screen
         const float barHeight = 40;
         Raylib.DrawRectangle(0, Raylib.GetScreenHeight() - 40, Raylib.GetScreenWidth(), (int)barHeight, Color.DarkGray);
-        float topMargin = (float)Raylib.GetScreenHeight() - 30;
+        var topMargin = Raylib.GetScreenHeight() - 30;
         const float infoUnit = 50;
         const float fontSize = 20;
         //Draw pixel info
-        Vector2 pixelPos = GetPixelUnderMouse();
+        var pixelPos = GetPixelUnderMouse();
         var pixelIsInImage = pixelPos.X >= 0 && pixelPos.Y >= 0 && pixelPos.X < _image.Width &&
                              pixelPos.Y < _image.Height;
         Raylib.TraceLog(TraceLogLevel.Debug, "DrawHud");
-        Color pixelColor = pixelIsInImage
+        var pixelColor = pixelIsInImage
             ? Raylib.GetImageColor(_image, (int)pixelPos.X, (int)pixelPos.Y)
             : new Color(0, 0, 0, 0);
         DrawPixelInfo(pixelPos, pixelColor, infoUnit, topMargin, fontSize);
         if (_enableMagnifiedView) {
             DrawMagnifiedView(barHeight, pixelColor);
         }
-        // Draw Zoom level on the left of the bar
-        Raylib.DrawText(_cam.Zoom.ToString("F2"), 10, (int)topMargin, (int)fontSize, Color.White);
+        Raylib.DrawText(_cam.Zoom.ToString("F2"), 10, topMargin, (int)fontSize, Color.White);
     }
 
     private static void DrawMagnifiedView(float barHeight, Color pixelColor) {
         // Draw Zoomed preview of pixel under mouse
-        const float magnificationFactor = 8f; // Magnification factor
-        const int areaSize = 15; // Area size in pixels
+        const float magnificationFactor = 8f;
+        const int areaSize = 15; // in pixels
 
         Vector2 mousePixel = GetPixelUnderMouse();
         bool isPixelDark = (pixelColor.R + pixelColor.G + pixelColor.B) / 3 < 128;
