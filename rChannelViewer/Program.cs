@@ -49,14 +49,9 @@ static class Program {
 
         // Check if a file path is passed as an argument
         if (args.Length > 0) {
-            string filePath = args[0];
-            if (System.IO.File.Exists(filePath)) {
-                LoadNewTexture(filePath);
-            }
-            else {
-                //System.Windows.Forms.MessageBox.Show("File not found: " + filePath, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            LoadNewTexture(args[0]);
         }
+
 
         while (!Raylib.WindowShouldClose()) {
             // Logic
@@ -83,6 +78,7 @@ static class Program {
                 _colorModel = 0;
             }
         }
+
         if (Raylib.IsKeyPressed(KeyboardKey.Up)) {
             _colorModel -= 1;
             if ((int)_colorModel < 0) {
@@ -225,10 +221,9 @@ static class Program {
             Raylib.GetScreenHeight() - (int)barHeight - _magnifiedRenderTexture.Texture.Height,
             Color.White);
     }
-    
+
     static string GetChannelInModel(byte x) {
-        return _colorModel switch
-        {
+        return _colorModel switch {
             ColorModel.hex => x.ToString("X2"),
             ColorModel.rgb => x.ToString(),
             ColorModel.hsv => (x / 255f * 100f).ToString("N0"), // Placeholder)
@@ -270,7 +265,8 @@ static class Program {
                 (int)(Raylib.GetScreenWidth() - infoUnit * 3), (int)topMargin, (int)fontSize, Color.White);
             // Hue
             Raylib.DrawText(hsv.X.ToString("N0"),
-                (int)(Raylib.GetScreenWidth() - infoUnit * 4), (int)topMargin, (int)fontSize, Raylib.ColorFromHSV(hsv.X,0.25f,1));
+                (int)(Raylib.GetScreenWidth() - infoUnit * 4), (int)topMargin, (int)fontSize,
+                Raylib.ColorFromHSV(hsv.X, 0.25f, 1));
         }
     }
 
@@ -307,6 +303,11 @@ static class Program {
 
     static void LoadNewTexture(string path) {
         Image fullTextureImage = Raylib.LoadImage(path);
+        if (fullTextureImage.Width == 0 || fullTextureImage.Height == 0) {
+            MessageBox.Show("Failed to load image: " + path, "Error", MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return;
+        }
         Image redChannelImage = Raylib.ImageCopy(fullTextureImage);
         Image greenChannelImage = Raylib.ImageCopy(fullTextureImage);
         Image blueChannelImage = Raylib.ImageCopy(fullTextureImage);
