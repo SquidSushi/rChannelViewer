@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <OutputType>WinExe</OutputType> <!-- Changed to WinExe to disable the console window -->
-        <TargetFramework>net7.0</TargetFramework>
+        <TargetFramework>net8.0-windows</TargetFramework> <!-- Updated to explicitly target Windows -->
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <UseWindowsForms>true</UseWindowsForms>

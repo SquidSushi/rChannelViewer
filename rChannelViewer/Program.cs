@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Windows.Forms;
 
 namespace rChannelViewer;
 
@@ -11,6 +12,15 @@ static class Program {
 
     static Texture2D[] _channels = new Texture2D[5];
 
+    private enum ColorModel {
+        hex,
+        rgb,
+        hsv,
+        floatrgb
+    };
+
+    private static ColorModel _colorModel = ColorModel.hex;
+
     // O <- Full image
     // 1 <- Red
     // 2 <- Green
@@ -19,8 +29,7 @@ static class Program {
     static RenderTexture2D _magnifiedRenderTexture;
     private static bool _enableMagnifiedView = true;
     static Image _image;
-    
-    
+
 
     static Camera2D _cam = new Camera2D() {
         Offset = new Vector2(0, 0),
@@ -37,13 +46,14 @@ static class Program {
         GenerateBackgroundTexture();
         LoadDefaultTexture();
         _magnifiedRenderTexture = Raylib.LoadRenderTexture(8 * 15, 8 * 15);
-        
+
         // Check if a file path is passed as an argument
         if (args.Length > 0) {
             string filePath = args[0];
             if (System.IO.File.Exists(filePath)) {
                 LoadNewTexture(filePath);
-            } else {
+            }
+            else {
                 //System.Windows.Forms.MessageBox.Show("File not found: " + filePath, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -52,17 +62,32 @@ static class Program {
             // Logic
             UpdateCamera();
             UpdateSelectedChannel();
-
+            UpdateSelectedColorFormat();
             if (Raylib.IsKeyPressed(KeyboardKey.Tab)) {
                 _enableMagnifiedView = !_enableMagnifiedView;
             }
-            
+
             if (Raylib.IsFileDropped()) {
                 LoadNewTexture(Raylib.GetDroppedFiles()[0]);
             }
-            
+
             // Drawing
             Draw();
+        }
+    }
+
+    private static void UpdateSelectedColorFormat() {
+        if (Raylib.IsKeyPressed(KeyboardKey.Down)) {
+            _colorModel += 1;
+            if ((int)_colorModel > Enum.GetValues(typeof(ColorModel)).Length - 1) {
+                _colorModel = 0;
+            }
+        }
+        if (Raylib.IsKeyPressed(KeyboardKey.Up)) {
+            _colorModel -= 1;
+            if ((int)_colorModel < 0) {
+                _colorModel = (ColorModel)(Enum.GetValues(typeof(ColorModel)).Length - 1);
+            }
         }
     }
 
@@ -110,14 +135,16 @@ static class Program {
             Vector2 delta = Raylib.GetMouseDelta();
             _cam.Target -= delta / _cam.Zoom;
         }
+
         //Jump
         if (Raylib.IsMouseButtonPressed(MouseButton.Right)) {
             _cam.Target = GetPixelUnderMouse();
             //Raylib.SetMousePosition(Raylib.GetScreenWidth()/2, Raylib.GetScreenHeight()/2);
         }
+
         // Recenter
         if (Raylib.IsKeyPressed(KeyboardKey.Space)) {
-            _cam.Target = new(_image.Width/2, _image.Height/2);
+            _cam.Target = new(_image.Width / 2, _image.Height / 2);
         }
     }
 
@@ -128,7 +155,7 @@ static class Program {
         Raylib.DrawTexture(_channels[_channelMode], 0, 0, Color.White);
         Raylib.EndMode2D();
         DrawUserInterface();
-        Raylib.DrawFPS(10, 10);
+        //Raylib.DrawFPS(10, 10);
         Raylib.EndDrawing();
     }
 
@@ -136,6 +163,17 @@ static class Program {
         // Draw a Gray Rectangle that's 40 pixels high at the bottom of the screen
         const float barHeight = 40;
         Raylib.DrawRectangle(0, Raylib.GetScreenHeight() - 40, Raylib.GetScreenWidth(), (int)barHeight, Color.DarkGray);
+        Color[] channelColors = {
+            Color.DarkGray,
+            Raylib.GetColor(0x880000FF),
+            Raylib.GetColor(0x008800FF),
+            Raylib.GetColor(0x000088FF),
+            Color.Black
+        };
+        Raylib.DrawRectangleRounded(
+            new(Raylib.GetScreenWidth() / 2 - 100, Raylib.GetScreenHeight() - barHeight, 200, barHeight),
+            1f, 5,
+            channelColors[_channelMode]);
         var topMargin = Raylib.GetScreenHeight() - 30;
         const float infoUnit = 50;
         const float fontSize = 20;
@@ -147,15 +185,17 @@ static class Program {
         var pixelColor = pixelIsInImage
             ? Raylib.GetImageColor(_image, (int)pixelPos.X, (int)pixelPos.Y)
             : new Color(0, 0, 0, 0);
-        DrawPixelInfo(pixelPos, pixelColor, infoUnit, topMargin, fontSize);
+        DrawPixelColorInfo(pixelColor, infoUnit, topMargin, fontSize);
         if (_enableMagnifiedView) {
             DrawMagnifiedView(barHeight, pixelColor);
         }
+
         Raylib.DrawText("x" + _cam.Zoom.ToString("F2"), 10, topMargin, (int)fontSize, Color.White);
         // Draw Pixel Coordinates in integers in the center of the UI bar
-        string coordText = $"{pixelPos.X:N0} \t {pixelPos.Y:N0}";
-        Raylib.DrawText(coordText, Raylib.GetScreenWidth() / 2 - Raylib.MeasureText(coordText, (int)fontSize) / 2,
-            (int)topMargin, (int)fontSize, Color.White);
+        string coordText = $"{(int)pixelPos.X} \t {(int)pixelPos.Y}";
+        Raylib.DrawText(coordText,
+            Raylib.GetScreenWidth() / 2 - Raylib.MeasureText(coordText, (int)fontSize) / 2, (int)topMargin,
+            (int)fontSize, Color.White);
     }
 
     private static void DrawMagnifiedView(float barHeight, Color pixelColor) {
@@ -185,27 +225,52 @@ static class Program {
             Raylib.GetScreenHeight() - (int)barHeight - _magnifiedRenderTexture.Texture.Height,
             Color.White);
     }
+    
+    static string GetChannelInModel(byte x) {
+        return _colorModel switch
+        {
+            ColorModel.hex => x.ToString("X2"),
+            ColorModel.rgb => x.ToString(),
+            ColorModel.hsv => (x / 255f * 100f).ToString("N0"), // Placeholder)
+            ColorModel.floatrgb => (x / 255f).ToString("F2"),
+            _ => x.ToString()
+        };
+    }
 
-    private static void DrawPixelInfo(Vector2 pixelPos, Color pixelColor, float infoUnit, float topMargin,
+    private static void DrawPixelColorInfo(Color pixelColor, float infoUnit, float topMargin,
         float fontSize) {
-        if (pixelPos.X >= 0 && pixelPos.Y >= 0 && pixelPos.X < _image.Width && pixelPos.Y < _image.Height) {
-            // Get pixel color
-
+        if (_colorModel != ColorModel.hsv) {
             //Alpha 
-            Raylib.DrawTextEx(Raylib.GetFontDefault(), pixelColor.A.ToString("X2"),
+            Raylib.DrawTextEx(Raylib.GetFontDefault(), GetChannelInModel(pixelColor.A),
                 new Vector2(Raylib.GetScreenWidth() - infoUnit * 1, topMargin), fontSize, 1, Color.White);
             // Blue
-            Raylib.DrawTextEx(Raylib.GetFontDefault(), pixelColor.B.ToString("X2"),
+            Raylib.DrawTextEx(Raylib.GetFontDefault(), GetChannelInModel(pixelColor.B),
                 new Vector2(Raylib.GetScreenWidth() - infoUnit * 2, topMargin), fontSize, 1,
                 Raylib.GetColor(0x9999FFFF));
             // Green
-            Raylib.DrawTextEx(Raylib.GetFontDefault(), pixelColor.G.ToString("X2"),
+            Raylib.DrawTextEx(Raylib.GetFontDefault(), GetChannelInModel(pixelColor.G),
                 new Vector2(Raylib.GetScreenWidth() - infoUnit * 3, topMargin), fontSize, 1,
                 Raylib.GetColor(0x99FF99FF));
             // Red
-            Raylib.DrawTextEx(Raylib.GetFontDefault(), pixelColor.R.ToString("X2"),
+            Raylib.DrawTextEx(Raylib.GetFontDefault(), GetChannelInModel(pixelColor.R),
                 new Vector2(Raylib.GetScreenWidth() - infoUnit * 4, topMargin), fontSize, 1,
                 Raylib.GetColor(0xFF9999FF));
+        }
+        else {
+            var hsv = Raylib.ColorToHSV(pixelColor);
+            // Numbers are formatted 0 to 100
+            // Alpha
+            Raylib.DrawText(GetChannelInModel(pixelColor.A),
+                (int)(Raylib.GetScreenWidth() - infoUnit * 1), (int)topMargin, (int)fontSize, Color.White);
+            // Value
+            Raylib.DrawText(GetChannelInModel((byte)(hsv.Z * 255f)),
+                (int)(Raylib.GetScreenWidth() - infoUnit * 2), (int)topMargin, (int)fontSize, Color.White);
+            // Saturation
+            Raylib.DrawText(GetChannelInModel((byte)(hsv.Y * 255)),
+                (int)(Raylib.GetScreenWidth() - infoUnit * 3), (int)topMargin, (int)fontSize, Color.White);
+            // Hue
+            Raylib.DrawText(hsv.X.ToString("N0"),
+                (int)(Raylib.GetScreenWidth() - infoUnit * 4), (int)topMargin, (int)fontSize, Raylib.ColorFromHSV(hsv.X,0.25f,1));
         }
     }
 
@@ -279,8 +344,8 @@ static class Program {
     }
 
     static void LoadDefaultTexture() {
-        Image fauxFullTexture = Raylib.GenImageColor(100, 100, Color.Blank);
-        Image fauxChannelTexture = Raylib.GenImageColor(100, 100, Color.Black);
+        Image fauxFullTexture = Raylib.GenImageColor(1, 1, Color.Blank);
+        Image fauxChannelTexture = Raylib.GenImageColor(1, 1, Color.Black);
         _image = fauxChannelTexture;
         _channels[0] = Raylib.LoadTextureFromImage(fauxFullTexture);
         _channels[1] = Raylib.LoadTextureFromImage(fauxChannelTexture);
