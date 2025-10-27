@@ -28,7 +28,7 @@ static class Program {
     };
 
 
-    static void Main() {
+    static void Main(string[] args) {
         Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
         Raylib.InitWindow(1280, 720, "rChannelViewer");
         Raylib.SetTargetFPS(120);
@@ -36,18 +36,29 @@ static class Program {
         LoadDefaultTexture();
         _magnifiedRenderTexture = Raylib.LoadRenderTexture(8 * 15, 8 * 15);
 
-        // for testing purposes I'm actually loading an image here.
-        LoadNewTexture("HeroHigh_CurCavBrAO.png"); //TODO remove test image load
-
+        // Check if a file path is passed as an argument
+        if (args.Length > 0) {
+            string filePath = args[0];
+            if (System.IO.File.Exists(filePath)) {
+                LoadNewTexture(filePath);
+            } else {
+                //System.Windows.Forms.MessageBox.Show("File not found: " + filePath, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
 
         while (!Raylib.WindowShouldClose()) {
-            //Logic
+            // Logic
             UpdateCamera();
             UpdateSelectedChannel();
+
             if (Raylib.IsKeyPressed(KeyboardKey.Tab)) {
                 _enableMagnifiedView = !_enableMagnifiedView;
             }
-
+            
+            if (Raylib.IsFileDropped()) {
+                LoadNewTexture(Raylib.GetDroppedFiles()[0]);
+            }
+            
             // Drawing
             Draw();
         }
@@ -139,6 +150,10 @@ static class Program {
             DrawMagnifiedView(barHeight, pixelColor);
         }
         Raylib.DrawText("x" + _cam.Zoom.ToString("F2"), 10, topMargin, (int)fontSize, Color.White);
+        // Draw Pixel Coordinates in integers in the center of the UI bar
+        string coordText = $"{pixelPos.X:N0} \t {pixelPos.Y:N0}";
+        Raylib.DrawText(coordText, Raylib.GetScreenWidth() / 2 - Raylib.MeasureText(coordText, (int)fontSize) / 2,
+            (int)topMargin, (int)fontSize, Color.White);
     }
 
     private static void DrawMagnifiedView(float barHeight, Color pixelColor) {
@@ -161,7 +176,7 @@ static class Program {
         Raylib.DrawRectangleLinesEx(
             new Rectangle(_magnifiedRenderTexture.Texture.Width / 2 - pixelSize / 2,
                 _magnifiedRenderTexture.Texture.Height / 2 - pixelSize / 2, pixelSize, pixelSize), 1,
-            isPixelDark ? Color.White : Color.Blank);
+            isPixelDark ? Color.White : Color.Black);
         Raylib.EndTextureMode();
         Raylib.DrawTexture(_magnifiedRenderTexture.Texture,
             Raylib.GetScreenWidth() - _magnifiedRenderTexture.Texture.Width,
@@ -196,7 +211,7 @@ static class Program {
         var bgColor1 = Raylib.GetColor(0x222222FF);
         var bgColor2 = Raylib.GetColor(0x111111FF);
 
-        const int bgSize = 200;
+        const int bgSize = 50;
 
         var bgImg = Raylib.GenImageColor(bgSize, bgSize, Color.Magenta);
         for (int x = 0; x < bgSize; x++) {
@@ -216,7 +231,7 @@ static class Program {
 
     static void DrawBackground() {
         // This function draws diagonal stripes in the background.
-        float offset = (float)Raylib.GetTime() * 100 % 200;
+        float offset = (float)Raylib.GetTime() * 25 % 200;
         float screenX = Raylib.GetScreenWidth();
         float screenY = Raylib.GetScreenHeight();
         Raylib.DrawTexturePro(_backgroundTexture, new(offset, 0, screenX, screenY), new(0, 0, screenX, screenY),
