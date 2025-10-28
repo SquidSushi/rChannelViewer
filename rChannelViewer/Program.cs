@@ -31,9 +31,9 @@ static class Program {
     static RenderTexture2D _magnifiedRenderTexture;
     private static bool _enableMagnifiedView = true;
     static Image _image;
-    static Font _regularFont;
+    //static Font _regularFont;
     static Font _monoFont;
-    static Font _boldFont;
+    static Font _regularFont;
 
     static Camera2D _cam = new Camera2D() {
         Offset = new Vector2(0, 0),
@@ -48,14 +48,11 @@ static class Program {
         Raylib.InitWindow(1280, 720, $"rChannelViewer v{GetBuildInfo()}");
         Image icon = Raylib.LoadImage("icon.png");
         Raylib.SetWindowIcon(icon);
-        //Raylib.UnloadImage(icon);
-        // Embed build info (version or build datetime) into the window title
+        Raylib.UnloadImage(icon);
         Raylib.SetTargetFPS(120);
         GenerateBackgroundTexture();
         LoadDefaultTexture();
-        // Load Roboto Font from Windows Fonts folder
-        _regularFont = Raylib.LoadFontEx("Roboto-VariableFont_wdth,wght.ttf", 30, null, 0);
-        _boldFont = Raylib.LoadFontEx("Roboto-Bold.ttf", 30, null, 0);
+        _regularFont = Raylib.LoadFontEx("Roboto-Bold.ttf", 30, null, 0);
         _monoFont = Raylib.LoadFontEx("RobotoMono-VariableFont_wght.ttf", 30, null, 0);
 
         _magnifiedRenderTexture = Raylib.LoadRenderTexture(8 * 15, 8 * 15);
@@ -210,7 +207,7 @@ static class Program {
         }
 
         Raylib.DrawTextEx(
-            _boldFont,
+            _regularFont,
             "x" + _cam.Zoom.ToString("F2"),
             new Vector2(10, topMargin),
             fontSize, 1, Color.White);
@@ -218,10 +215,10 @@ static class Program {
         string coordText = $"{(int)pixelPos.X} \t {(int)pixelPos.Y}";
         // Pixel Coordinates
         Raylib.DrawTextEx(
-            _boldFont,
+            _regularFont,
             coordText,
             new Vector2(
-                Raylib.GetScreenWidth() / 2 - Raylib.MeasureTextEx(_boldFont, coordText, fontSize, 1).X / 2,
+                Raylib.GetScreenWidth() / 2 - Raylib.MeasureTextEx(_regularFont, coordText, fontSize, 1).X / 2,
                 topMargin),
             fontSize, 1, Color.White);
     }
@@ -267,8 +264,8 @@ static class Program {
     private static void DrawPixelColorInfo(Color pixelColor, float infoUnit, float topMargin,
         float fontSize) {
         if (_colorModel != ColorModel.hsv) {
-            Font font = _colorModel == ColorModel.hex ? _monoFont : _boldFont;
-            infoUnit = _colorModel == ColorModel.hex ? Raylib.MeasureText("00",(int)fontSize) : infoUnit;
+            Font font = _colorModel == ColorModel.hex ? _monoFont : _regularFont;
+            infoUnit = _colorModel == ColorModel.hex ? Raylib.MeasureTextEx(_monoFont,"00",fontSize,1).X : infoUnit;
             // Alpha
             Raylib.DrawTextEx(
                 font,
