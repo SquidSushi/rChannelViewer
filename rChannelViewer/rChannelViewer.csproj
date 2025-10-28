@@ -24,6 +24,22 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
     </None>
+    <!-- Ensure fonts are included in build and publish outputs so Raylib.LoadFont can find them at runtime -->
+    <None Include="Roboto-VariableFont_wdth,wght.ttf">
+      <Visible>true</Visible>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </None>
+    <None Include="RobotoMono-VariableFont_wght.ttf">
+      <Visible>true</Visible>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </None>
+    <None Include="Roboto-Bold.ttf">
+      <Visible>true</Visible>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

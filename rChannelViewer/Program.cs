@@ -31,7 +31,9 @@ static class Program {
     static RenderTexture2D _magnifiedRenderTexture;
     private static bool _enableMagnifiedView = true;
     static Image _image;
-
+    static Font _regularFont;
+    static Font _monoFont;
+    static Font _boldFont;
 
     static Camera2D _cam = new Camera2D() {
         Offset = new Vector2(0, 0),
@@ -51,6 +53,11 @@ static class Program {
         Raylib.SetTargetFPS(120);
         GenerateBackgroundTexture();
         LoadDefaultTexture();
+        // Load Roboto Font from Windows Fonts folder
+        _regularFont = Raylib.LoadFontEx("Roboto-VariableFont_wdth,wght.ttf", 30, null, 0);
+        _boldFont = Raylib.LoadFontEx("Roboto-Bold.ttf", 30, null, 0);
+        _monoFont = Raylib.LoadFontEx("RobotoMono-VariableFont_wght.ttf", 30, null, 0);
+
         _magnifiedRenderTexture = Raylib.LoadRenderTexture(8 * 15, 8 * 15);
         
 
@@ -186,9 +193,9 @@ static class Program {
         Raylib.DrawRectanglePro(
             new(Raylib.GetScreenWidth() / 2 - 100, Raylib.GetScreenHeight() - barHeight, 200, barHeight), Vector2.Zero, 
             0,channelColors[_channelMode]);
-        var topMargin = Raylib.GetScreenHeight() - 30;
-        const float infoUnit = 50;
-        const float fontSize = 20;
+        var topMargin = Raylib.GetScreenHeight() - 40 + 5;
+        const float infoUnit = 55;
+        const float fontSize = 30;
         //Draw pixel info
         var pixelPos = GetPixelUnderMouse();
         var pixelIsInImage = pixelPos.X >= 0 && pixelPos.Y >= 0 && pixelPos.X < _image.Width &&
@@ -202,13 +209,21 @@ static class Program {
             DrawMagnifiedView(barHeight, pixelColor);
         }
 
-        Raylib.DrawText("x" + _cam.Zoom.ToString("F2"), 10, topMargin, (int)fontSize, Color.White);
+        Raylib.DrawTextEx(
+            _boldFont,
+            "x" + _cam.Zoom.ToString("F2"),
+            new Vector2(10, topMargin),
+            fontSize, 1, Color.White);
         // Draw Pixel Coordinates in integers in the center of the UI bar
         string coordText = $"{(int)pixelPos.X} \t {(int)pixelPos.Y}";
-        Raylib.DrawText(coordText,
-            Raylib.GetScreenWidth() / 2 - Raylib.MeasureText(coordText, (int)fontSize) / 2, (int)topMargin,
-            (int)fontSize, Color.White);
-        //Raylib.DrawCircle(10,10,50,Color.Red);
+        // Pixel Coordinates
+        Raylib.DrawTextEx(
+            _boldFont,
+            coordText,
+            new Vector2(
+                Raylib.GetScreenWidth() / 2 - Raylib.MeasureTextEx(_boldFont, coordText, fontSize, 1).X / 2,
+                topMargin),
+            fontSize, 1, Color.White);
     }
 
     private static void DrawMagnifiedView(float barHeight, Color pixelColor) {
@@ -252,38 +267,60 @@ static class Program {
     private static void DrawPixelColorInfo(Color pixelColor, float infoUnit, float topMargin,
         float fontSize) {
         if (_colorModel != ColorModel.hsv) {
-            //Alpha 
-            Raylib.DrawTextEx(Raylib.GetFontDefault(), GetChannelInModel(pixelColor.A),
-                new Vector2(Raylib.GetScreenWidth() - infoUnit * 1, topMargin), fontSize, 1, Color.White);
+            Font font = _colorModel == ColorModel.hex ? _monoFont : _boldFont;
+            infoUnit = _colorModel == ColorModel.hex ? Raylib.MeasureText("00",(int)fontSize) : infoUnit;
+            // Alpha
+            Raylib.DrawTextEx(
+                font,
+                GetChannelInModel(pixelColor.A),
+                new Vector2(Raylib.GetScreenWidth() - infoUnit * 1, topMargin),
+                fontSize, 1, Color.White);
             // Blue
-            Raylib.DrawTextEx(Raylib.GetFontDefault(), GetChannelInModel(pixelColor.B),
-                new Vector2(Raylib.GetScreenWidth() - infoUnit * 2, topMargin), fontSize, 1,
-                Raylib.GetColor(0x9999FFFF));
+            Raylib.DrawTextEx(
+                font,
+                GetChannelInModel(pixelColor.B),
+                new Vector2(Raylib.GetScreenWidth() - infoUnit * 2, topMargin),
+                fontSize, 1, Raylib.GetColor(0x9999FFFF));
             // Green
-            Raylib.DrawTextEx(Raylib.GetFontDefault(), GetChannelInModel(pixelColor.G),
-                new Vector2(Raylib.GetScreenWidth() - infoUnit * 3, topMargin), fontSize, 1,
-                Raylib.GetColor(0x99FF99FF));
+            Raylib.DrawTextEx(
+                font,
+                GetChannelInModel(pixelColor.G),
+                new Vector2(Raylib.GetScreenWidth() - infoUnit * 3, topMargin),
+                fontSize, 1, Raylib.GetColor(0x99FF99FF));
             // Red
-            Raylib.DrawTextEx(Raylib.GetFontDefault(), GetChannelInModel(pixelColor.R),
-                new Vector2(Raylib.GetScreenWidth() - infoUnit * 4, topMargin), fontSize, 1,
-                Raylib.GetColor(0xFF9999FF));
+            Raylib.DrawTextEx(
+                font,
+                GetChannelInModel(pixelColor.R),
+                new Vector2(Raylib.GetScreenWidth() - infoUnit * 4, topMargin),
+                fontSize, 1, Raylib.GetColor(0xFF9999FF));
         }
         else {
             var hsv = Raylib.ColorToHSV(pixelColor);
             // Numbers are formatted 0 to 100
             // Alpha
-            Raylib.DrawText(GetChannelInModel(pixelColor.A),
-                (int)(Raylib.GetScreenWidth() - infoUnit * 1), (int)topMargin, (int)fontSize, Color.White);
+            Raylib.DrawTextEx(
+                _regularFont,
+                GetChannelInModel(pixelColor.A),
+                new Vector2(Raylib.GetScreenWidth() - infoUnit * 1, topMargin),
+                fontSize, 1, Color.White);
             // Value
-            Raylib.DrawText(GetChannelInModel((byte)(hsv.Z * 255f)),
-                (int)(Raylib.GetScreenWidth() - infoUnit * 2), (int)topMargin, (int)fontSize, Color.White);
+            Raylib.DrawTextEx(
+                _regularFont,
+                GetChannelInModel((byte)(hsv.Z * 255f)),
+                new Vector2(Raylib.GetScreenWidth() - infoUnit * 2, topMargin),
+                fontSize, 1, Color.White);
             // Saturation
-            Raylib.DrawText(GetChannelInModel((byte)(hsv.Y * 255)),
-                (int)(Raylib.GetScreenWidth() - infoUnit * 3), (int)topMargin, (int)fontSize, Color.White);
+            Raylib.DrawTextEx(
+                _regularFont,
+                GetChannelInModel((byte)(hsv.Y * 255f)),
+                new Vector2(Raylib.GetScreenWidth() - infoUnit * 3, topMargin),
+                fontSize, 1, Color.White);
             // Hue
-            Raylib.DrawText(hsv.X.ToString("N0"),
-                (int)(Raylib.GetScreenWidth() - infoUnit * 4), (int)topMargin, (int)fontSize,
-                Raylib.ColorFromHSV(hsv.X, 0.25f, 1));
+            Raylib.DrawTextEx(
+                _regularFont,
+                hsv.X.ToString("N0"),
+                new Vector2(Raylib.GetScreenWidth() - infoUnit * 4, topMargin),
+                fontSize, 1, hsv.Y>0?Raylib.ColorFromHSV(hsv.X, 0.5f, 1f): Color.LightGray);
         }
     }
 
