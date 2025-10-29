@@ -285,10 +285,19 @@ public static class Program {
 
         Raylib.BeginTextureMode(_magnifiedRenderTexture);
         Raylib.ClearBackground(Color.Blank);
+        Camera2D magnifyCam = new Camera2D() {
+            Offset = new Vector2(_magnifiedRenderTexture.Texture.Width / 2,
+                _magnifiedRenderTexture.Texture.Height / 2),
+            Target = new Vector2(mousePixel.X + 0.5f, mousePixel.Y + 0.5f),
+            Rotation = 0,
+            Zoom = magnificationFactor
+        };
+        Raylib.BeginMode2D(magnifyCam);
         Raylib.DrawTexturePro(_channels[0],
-            new Rectangle(mousePixel.X - areaSize / 2, mousePixel.Y - areaSize / 2, areaSize, -areaSize),
-            new Rectangle(0, 0, _magnifiedRenderTexture.Texture.Width, _magnifiedRenderTexture.Texture.Height),
+            new Rectangle(0, 0, _image.Width, _image.Height),
+            new Rectangle(0, 0, _image.Width, _image.Height),
             Vector2.Zero, 0, Color.White);
+        Raylib.EndMode2D();
         // Draw a rectangle around the center pixel
         float pixelSize = magnificationFactor;
         Raylib.DrawRectangleLinesEx(
@@ -296,10 +305,13 @@ public static class Program {
                 _magnifiedRenderTexture.Texture.Height / 2 - pixelSize / 2, pixelSize, pixelSize), 1,
             isPixelDark ? Color.White : Color.Black);
         Raylib.EndTextureMode();
-        Raylib.DrawTexture(_magnifiedRenderTexture.Texture,
-            Raylib.GetScreenWidth() - _magnifiedRenderTexture.Texture.Width,
-            Raylib.GetScreenHeight() - (int)barHeight - _magnifiedRenderTexture.Texture.Height,
-            Color.White);
+        Raylib.DrawTexturePro(_magnifiedRenderTexture.Texture,
+            new Rectangle(0, 0, _magnifiedRenderTexture.Texture.Width,
+                -_magnifiedRenderTexture.Texture.Height),
+            new Rectangle(Raylib.GetScreenWidth() - _magnifiedRenderTexture.Texture.Width - 10,
+                Raylib.GetScreenHeight() - barHeight - _magnifiedRenderTexture.Texture.Height - 10,
+                _magnifiedRenderTexture.Texture.Width, _magnifiedRenderTexture.Texture.Height),
+            Vector2.Zero, 0, Color.White);
     }
 
     static string GetChannelInModel(byte x) {
