@@ -191,6 +191,7 @@ public static class Program {
 
         if (Raylib.GetMouseWheelMove() < 0 && _cam.Zoom > 1 / 64f) {
             _cam.Zoom /= 2;
+            _cam.Target = GetPixelUnderMouse();
         }
 
         // Pan
@@ -218,7 +219,6 @@ public static class Program {
         Raylib.DrawTexture(_channels[_channelMode], 0, 0, Color.White);
         Raylib.EndMode2D();
         DrawUserInterface();
-        //Raylib.DrawFPS(10, 10);
         Raylib.EndDrawing();
     }
 
@@ -282,7 +282,7 @@ public static class Program {
 
 
         Raylib.BeginTextureMode(_magnifiedRenderTexture);
-        Raylib.ClearBackground(Color.Black);
+        Raylib.ClearBackground(Color.Blank);
         Raylib.DrawTexturePro(_channels[0],
             new Rectangle(mousePixel.X - areaSize / 2, mousePixel.Y - areaSize / 2, areaSize, -areaSize),
             new Rectangle(0, 0, _magnifiedRenderTexture.Texture.Width, _magnifiedRenderTexture.Texture.Height),
@@ -388,7 +388,8 @@ public static class Program {
     }
 
     static Vector2 GetPixelUnderMouse() {
-        return Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), _cam);
+        Vector2 r = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), _cam);
+        return r with{X = (int)r.X, Y = (int)r.Y};
     }
 
     static void DrawBackground() {
@@ -441,6 +442,9 @@ public static class Program {
         Raylib.UnloadImage(greenChannelImage);
         Raylib.UnloadImage(blueChannelImage);
         Raylib.UnloadImage(alphaChannelImage);
+        foreach (var t in _channels) {
+            Raylib.SetTextureWrap(t, TextureWrap.Clamp);
+        }
         _cam.Target = new Vector2(fullTextureImage.Width / 2, fullTextureImage.Height / 2);
     }
 
