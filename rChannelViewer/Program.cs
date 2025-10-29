@@ -460,6 +460,12 @@ public static class Program {
             Raylib.SetTextureWrap(t, TextureWrap.Clamp);
         }
         _cam.Target = new Vector2(fullTextureImage.Width / 2, fullTextureImage.Height / 2);
+        float zoomX = Raylib.GetScreenWidth() -100 / (float)fullTextureImage.Width;
+        float zoomY = (Raylib.GetScreenHeight() - 100) / (float)fullTextureImage.Height;
+        float favoredZoom = MathF.Min(zoomX, zoomY);
+        for (float z = 64; z > favoredZoom && z > 1/16f; z /= 2) {
+            _cam.Zoom = z/2;
+        }
     }
 
     static void LoadDefaultTexture() {
