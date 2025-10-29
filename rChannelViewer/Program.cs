@@ -225,8 +225,9 @@ public static class Program {
     private static void DrawUserInterface() {
         // Draw a Gray Rectangle that's 40 pixels high at the bottom of the screen
         const float barHeight = 40;
-        Raylib.DrawRectangle(0, Raylib.GetScreenHeight() - 40, Raylib.GetScreenWidth(), (int)barHeight,
+        Raylib.DrawRectangle(0, Raylib.GetScreenHeight() - (int)barHeight, Raylib.GetScreenWidth(), (int)barHeight,
             Color.DarkGray);
+        
         Color[] channelColors = {
             Color.DarkGray,
             Raylib.GetColor(0x880000FF),
@@ -238,7 +239,8 @@ public static class Program {
             new(Raylib.GetScreenWidth() / 2 - 100, Raylib.GetScreenHeight() - barHeight, 200, barHeight),
             Vector2.Zero,
             0, channelColors[_channelMode]);
-        var topMargin = Raylib.GetScreenHeight() - 40 + 5;
+        Raylib.DrawRectangleGradientV(0,Raylib.GetScreenHeight()- (int)barHeight, Raylib.GetScreenWidth(), 4, Raylib.GetColor(0x111111ff), Color.Blank);
+        var textTopMargin = Raylib.GetScreenHeight() - 40 + 5;
         const float infoUnit = 55;
         const float fontSize = 30;
         //Draw pixel info
@@ -249,7 +251,7 @@ public static class Program {
         var pixelColor = pixelIsInImage
             ? Raylib.GetImageColor(_image, (int)pixelPos.X, (int)pixelPos.Y)
             : new Color(0, 0, 0, 0);
-        DrawPixelColorInfo(pixelColor, infoUnit, topMargin, fontSize);
+        DrawPixelColorInfo(pixelColor, infoUnit, textTopMargin, fontSize);
         if (_enableMagnifiedView) {
             DrawMagnifiedView(barHeight, pixelColor);
         }
@@ -258,7 +260,7 @@ public static class Program {
         zoomText += (_cam.Zoom < 1) ? "1/" + (1 / _cam.Zoom) : _cam.Zoom.ToString("F2");
         Raylib.DrawTextEx(
             _regularFont, zoomText,
-            new Vector2(10, topMargin),
+            new Vector2(10, textTopMargin),
             fontSize, 1, Color.White);
         // Draw Pixel Coordinates in integers in the center of the UI bar
         string coordText = $"{(int)pixelPos.X} \t {(int)pixelPos.Y}";
@@ -268,7 +270,7 @@ public static class Program {
             coordText,
             new Vector2(
                 Raylib.GetScreenWidth() / 2 - Raylib.MeasureTextEx(_regularFont, coordText, fontSize, 1).X / 2,
-                topMargin),
+                textTopMargin),
             fontSize, 1, Color.White);
     }
 
