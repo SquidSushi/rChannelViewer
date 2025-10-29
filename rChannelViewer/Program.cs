@@ -3,18 +3,21 @@ using System.Numerics;
 using System.Windows.Forms;
 using System.IO;
 using System.Reflection;
+using System.Text.Json;
+
+// dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true -p:SelfContained=false 
 
 namespace rChannelViewer;
 
 using Raylib_cs;
 
-static class Program {
+public static class Program {
     static Texture2D _backgroundTexture;
     static int _channelMode;
 
     static Texture2D[] _channels = new Texture2D[5];
 
-    private enum ColorModel {
+    public enum ColorModel {
         hex,
         rgb,
         hsv,
@@ -30,7 +33,11 @@ static class Program {
     // 4 <- Alpha
     static RenderTexture2D _magnifiedRenderTexture;
     private static bool _enableMagnifiedView = true;
+    private static Color bg1 = Raylib.GetColor(0x222222FF);
+    private static Color bg2 = Raylib.GetColor(0x111111FF);
+
     static Image _image;
+
     //static Font _regularFont;
     static Font _monoFont;
     static Font _regularFont;
@@ -42,21 +49,51 @@ static class Program {
         Zoom = 1
     };
 
+    static string ColorToHex(Color color) {
+        return color.R.ToString("X2") + color.G.ToString("X2") + color.B.ToString("X2");
+    }
+    static Color HexToColor(string hex) {
+        if (hex.Length != 6) return Color.Magenta;
+        byte r = Convert.ToByte(hex.Substring(0, 2), 16);
+        byte g = Convert.ToByte(hex.Substring(2, 2), 16);
+        byte b = Convert.ToByte(hex.Substring(4, 2), 16);
+        return new Color(r, g, b, (byte)255);
+    }
 
     static void Main(string[] args) {
-        Raylib.SetConfigFlags(ConfigFlags.ResizableWindow | ConfigFlags.Msaa4xHint);
+        Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
         Raylib.InitWindow(1280, 720, $"rChannelViewer v{GetBuildInfo()}");
         Image icon = Raylib.LoadImage("icon.png");
         Raylib.SetWindowIcon(icon);
         Raylib.UnloadImage(icon);
         Raylib.SetTargetFPS(120);
-        GenerateBackgroundTexture();
+        // Look for a config.json file in the executable directory
+        if (File.Exists("config.json")) {
+            // Load config
+            try {
+                string configJson = File.ReadAllText("config.json");
+                var config = JsonSerializer.Deserialize<RcvConfig>(configJson);
+                if (config != null) {
+                    _enableMagnifiedView = config._enableMagnifiedView;
+                    _colorModel = config._colorModel;
+                    GenerateBackgroundTexture(HexToColor(config.bg1), HexToColor(config.bg2));
+                }
+            }
+            catch {
+                GenerateBackgroundTexture(Raylib.GetColor(0x222222FF), Raylib.GetColor(0x111111FF));
+            }
+        }
+        else {
+            GenerateBackgroundTexture(Raylib.GetColor(0x222222FF), Raylib.GetColor(0x111111FF));
+        }
+
+
         LoadDefaultTexture();
         _regularFont = Raylib.LoadFontEx("Roboto-Bold.ttf", 30, null, 0);
         _monoFont = Raylib.LoadFontEx("RobotoMono-VariableFont_wght.ttf", 30, null, 0);
 
         _magnifiedRenderTexture = Raylib.LoadRenderTexture(8 * 15, 8 * 15);
-        
+
 
         // Check if a file path is passed as an argument
         if (args.Length > 0) {
@@ -80,6 +117,17 @@ static class Program {
             // Drawing
             Draw();
         }
+
+        // Save config on exit
+        var saveConfig = new RcvConfig {
+            _enableMagnifiedView = _enableMagnifiedView,
+            _colorModel = _colorModel,
+            bg1 = ColorToHex(bg1),
+            bg2 = ColorToHex(bg2)
+        };
+        string saveJson = JsonSerializer.Serialize(saveConfig);
+        File.WriteAllText("config.json", saveJson);
+        
     }
 
     // Helper: try to return assembly version or fallback to assembly file last-write timestamp
@@ -131,20 +179,18 @@ static class Program {
     }
 
     private static void UpdateCamera() {
-        // Zoom
-        const float sqrt2 = 1.41421356f;
         _cam.Offset = Raylib.GetScreenCenter();
         if (_cam.Zoom <= 30.0f && Raylib.GetMouseWheelMove() > 0) {
             _cam.Target = GetPixelUnderMouse();
-            _cam.Zoom *= sqrt2;
+            _cam.Zoom *= 2;
             // Adjust target so that the pixel under the mouse remains the same
             Vector2 newMouseWorldPos = GetPixelUnderMouse();
             Vector2 error = newMouseWorldPos - _cam.Target;
             _cam.Target -= error;
         }
 
-        if (Raylib.GetMouseWheelMove() < 0 && _cam.Zoom > 1 / 16f) {
-            _cam.Zoom /= sqrt2;
+        if (Raylib.GetMouseWheelMove() < 0 && _cam.Zoom > 1 / 64f) {
+            _cam.Zoom /= 2;
         }
 
         // Pan
@@ -179,7 +225,8 @@ static class Program {
     private static void DrawUserInterface() {
         // Draw a Gray Rectangle that's 40 pixels high at the bottom of the screen
         const float barHeight = 40;
-        Raylib.DrawRectangle(0, Raylib.GetScreenHeight() - 40, Raylib.GetScreenWidth(), (int)barHeight, Color.DarkGray);
+        Raylib.DrawRectangle(0, Raylib.GetScreenHeight() - 40, Raylib.GetScreenWidth(), (int)barHeight,
+            Color.DarkGray);
         Color[] channelColors = {
             Color.DarkGray,
             Raylib.GetColor(0x880000FF),
@@ -188,8 +235,9 @@ static class Program {
             Color.Black
         };
         Raylib.DrawRectanglePro(
-            new(Raylib.GetScreenWidth() / 2 - 100, Raylib.GetScreenHeight() - barHeight, 200, barHeight), Vector2.Zero, 
-            0,channelColors[_channelMode]);
+            new(Raylib.GetScreenWidth() / 2 - 100, Raylib.GetScreenHeight() - barHeight, 200, barHeight),
+            Vector2.Zero,
+            0, channelColors[_channelMode]);
         var topMargin = Raylib.GetScreenHeight() - 40 + 5;
         const float infoUnit = 55;
         const float fontSize = 30;
@@ -206,9 +254,10 @@ static class Program {
             DrawMagnifiedView(barHeight, pixelColor);
         }
 
+        string zoomText = "x";
+        zoomText += (_cam.Zoom < 1) ? "1/" + (1 / _cam.Zoom) : _cam.Zoom.ToString("F2");
         Raylib.DrawTextEx(
-            _regularFont,
-            "x" + _cam.Zoom.ToString("F2"),
+            _regularFont, zoomText,
             new Vector2(10, topMargin),
             fontSize, 1, Color.White);
         // Draw Pixel Coordinates in integers in the center of the UI bar
@@ -265,7 +314,9 @@ static class Program {
         float fontSize) {
         if (_colorModel != ColorModel.hsv) {
             Font font = _colorModel == ColorModel.hex ? _monoFont : _regularFont;
-            infoUnit = _colorModel == ColorModel.hex ? Raylib.MeasureTextEx(_monoFont,"00",fontSize,1).X : infoUnit;
+            infoUnit = _colorModel == ColorModel.hex
+                ? Raylib.MeasureTextEx(_monoFont, "00", fontSize, 1).X
+                : infoUnit;
             // Alpha
             Raylib.DrawTextEx(
                 font,
@@ -317,14 +368,11 @@ static class Program {
                 _regularFont,
                 hsv.X.ToString("N0"),
                 new Vector2(Raylib.GetScreenWidth() - infoUnit * 4, topMargin),
-                fontSize, 1, hsv.Y>0?Raylib.ColorFromHSV(hsv.X, 0.5f, 1f): Color.LightGray);
+                fontSize, 1, hsv.Y > 0 ? Raylib.ColorFromHSV(hsv.X, 0.5f, 1f) : Color.LightGray);
         }
     }
 
-    static void GenerateBackgroundTexture() {
-        var bgColor1 = Raylib.GetColor(0x222222FF);
-        var bgColor2 = Raylib.GetColor(0x111111FF);
-
+    static void GenerateBackgroundTexture(Color bgColor1, Color bgColor2) {
         const int bgSize = 50;
 
         var bgImg = Raylib.GenImageColor(bgSize, bgSize, Color.Magenta);
