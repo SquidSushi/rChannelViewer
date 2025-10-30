@@ -434,7 +434,7 @@ public static class Program {
         Image alphaChannelImage = Raylib.ImageCopy(fullTextureImage);
         for (int x = 0; x < fullTextureImage.Width; x++) {
             for (int y = 0; y < fullTextureImage.Height; y++) {
-                if (processedPixels % 100000 == 1) {
+                if (processedPixels % 100_000 == 99999) {
                     float progress = processedPixels / (float)totalPixels;
                     DrawLoadingScreen(progress);
                 }
