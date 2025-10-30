@@ -190,8 +190,12 @@ public static class Program {
         }
 
         if (Raylib.GetMouseWheelMove() < 0 && _cam.Zoom > 1 / 64f) {
-            _cam.Zoom /= 2;
             _cam.Target = GetPixelUnderMouse();
+            _cam.Zoom /= 2;
+            // Adjust target so that the pixel under the mouse remains the same
+            Vector2 newMouseWorldPos = GetPixelUnderMouse();
+            Vector2 error = newMouseWorldPos - _cam.Target;
+            _cam.Target -= error;
         }
 
         // Pan
@@ -422,13 +426,18 @@ public static class Program {
                 MessageBoxIcon.Error);
             return;
         }
-
+        int totalPixels = fullTextureImage.Width * fullTextureImage.Height;
+        int processedPixels = 0;
         Image redChannelImage = Raylib.ImageCopy(fullTextureImage);
         Image greenChannelImage = Raylib.ImageCopy(fullTextureImage);
         Image blueChannelImage = Raylib.ImageCopy(fullTextureImage);
         Image alphaChannelImage = Raylib.ImageCopy(fullTextureImage);
         for (int x = 0; x < fullTextureImage.Width; x++) {
             for (int y = 0; y < fullTextureImage.Height; y++) {
+                if (processedPixels % 100000 == 1) {
+                    float progress = processedPixels / (float)totalPixels;
+                    DrawLoadingScreen(progress);
+                }
                 Color pixelColor = Raylib.GetImageColor(fullTextureImage, x, y);
                 // Red channel
                 Raylib.ImageDrawPixel(ref redChannelImage, x, y,
@@ -442,9 +451,9 @@ public static class Program {
                 // Alpha channel
                 Raylib.ImageDrawPixel(ref alphaChannelImage, x, y,
                     new Color(pixelColor.A, pixelColor.A, pixelColor.A, (byte)255));
+                processedPixels++;
             }
         }
-
         _channels[0] = Raylib.LoadTextureFromImage(fullTextureImage);
         _channels[1] = Raylib.LoadTextureFromImage(redChannelImage);
         _channels[2] = Raylib.LoadTextureFromImage(greenChannelImage);
@@ -478,5 +487,18 @@ public static class Program {
         _channels[3] = Raylib.LoadTextureFromImage(fauxChannelTexture);
         _channels[4] = Raylib.LoadTextureFromImage(fauxChannelTexture);
         Raylib.UnloadImage(fauxFullTexture);
+    }
+    
+    static void DrawLoadingScreen(float progress) {
+        Raylib.BeginDrawing();
+        DrawBackground();
+        const float barWidth = 400;
+        const float barHeight = 30;
+        float x = (Raylib.GetScreenWidth() - barWidth) / 2;
+        float y = (Raylib.GetScreenHeight() - barHeight) / 2;
+        Raylib.DrawRectangle((int)x-5, (int)y-5, (int)barWidth+10, (int)barHeight+10, Color.White);
+        Raylib.DrawRectangle((int)x, (int)y, (int)barWidth, (int)barHeight, Color.DarkGray);
+        Raylib.DrawRectangle((int)x, (int)y, (int)(barWidth * progress), (int)barHeight, Color.LightGray);
+        Raylib.EndDrawing();
     }
 }
