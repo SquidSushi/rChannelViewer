@@ -223,6 +223,9 @@ public static class Program {
         Raylib.DrawTexture(_channels[_channelMode], 0, 0, Color.White);
         Raylib.EndMode2D();
         DrawUserInterface();
+        // Boxed Text test
+        string loremIpsum = "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
+        RaylibHelpers.DrawTextBoxed(ref _regularFont, loremIpsum, new Rectangle(0, 0, Raylib.GetMouseX(), Raylib.GetMouseY()), 20, 2, Color.White, true);
         Raylib.EndDrawing();
     }
 
