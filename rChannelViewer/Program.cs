@@ -14,7 +14,7 @@ using Raylib_cs;
 public static class Program {
     static Texture2D _backgroundTexture;
     static int _channelMode;
-
+    private static Message_Box _messageBox;
     static Texture2D[] _channels = new Texture2D[5];
 
     public enum ColorModel {
@@ -33,14 +33,16 @@ public static class Program {
     // 4 <- Alpha
     static RenderTexture2D _magnifiedRenderTexture;
     private static bool _enableMagnifiedView = true;
-    private static Color bg1 = Raylib.GetColor(0x222222FF);
-    private static Color bg2 = Raylib.GetColor(0x111111FF);
+    private static Color _bg1 = Raylib.GetColor(0x222222FF);
+    private static Color _bg2 = Raylib.GetColor(0x111111FF);
 
     static Image _image;
 
     //static Font _regularFont;
     static Font _monoFont;
     static Font _regularFont;
+
+    static bool _helpVisible = false;
 
     static Camera2D _cam = new Camera2D() {
         Offset = new Vector2(0, 0),
@@ -52,6 +54,7 @@ public static class Program {
     static string ColorToHex(Color color) {
         return color.R.ToString("X2") + color.G.ToString("X2") + color.B.ToString("X2");
     }
+
     static Color HexToColor(string hex) {
         if (hex.Length != 6) return Color.Magenta;
         byte r = Convert.ToByte(hex.Substring(0, 2), 16);
@@ -91,7 +94,8 @@ public static class Program {
         LoadDefaultTexture();
         _regularFont = Raylib.LoadFontEx("Roboto-Bold.ttf", 30, null, 0);
         _monoFont = Raylib.LoadFontEx("RobotoMono-VariableFont_wght.ttf", 30, null, 0);
-
+        _messageBox = new Message_Box(_regularFont);
+        _messageBox.SetMessage("Welcome to rChannelViewer!\nPress F1 for help.\nDrag & drop a file into this window to open it.", 5.0f);
         _magnifiedRenderTexture = Raylib.LoadRenderTexture(8 * 15, 8 * 15);
 
 
@@ -106,8 +110,12 @@ public static class Program {
             UpdateCamera();
             UpdateSelectedChannel();
             UpdateSelectedColorFormat();
+            _messageBox.Update();
             if (Raylib.IsKeyPressed(KeyboardKey.Tab)) {
                 _enableMagnifiedView = !_enableMagnifiedView;
+            }
+            if (Raylib.IsKeyPressed(KeyboardKey.F1)) {
+                _helpVisible = !_helpVisible;
             }
 
             if (Raylib.IsFileDropped()) {
@@ -122,12 +130,11 @@ public static class Program {
         var saveConfig = new RcvConfig {
             _enableMagnifiedView = _enableMagnifiedView,
             _colorModel = _colorModel,
-            bg1 = ColorToHex(bg1),
-            bg2 = ColorToHex(bg2)
+            bg1 = ColorToHex(_bg1),
+            bg2 = ColorToHex(_bg2)
         };
         string saveJson = JsonSerializer.Serialize(saveConfig);
         File.WriteAllText("config.json", saveJson);
-        
     }
 
     // Helper: try to return assembly version or fallback to assembly file last-write timestamp
@@ -224,61 +231,86 @@ public static class Program {
         Raylib.EndMode2D();
         DrawUserInterface();
         // Boxed Text test
-        string loremIpsum = "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
-        RaylibHelpers.DrawTextBoxed(ref _regularFont, loremIpsum, new Rectangle(0, 0, Raylib.GetMouseX(), Raylib.GetMouseY()), 20, 2, Color.White, true);
+        string loremIpsum =
+            "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
+        //RaylibHelpers.DrawTextBoxed(ref _regularFont, loremIpsum, new Rectangle(0, 0, Raylib.GetMouseX(), Raylib.GetMouseY()), 20, 2, Color.White, true);
         Raylib.EndDrawing();
     }
 
     private static void DrawUserInterface() {
-        // Draw a Gray Rectangle that's 40 pixels high at the bottom of the screen
-        const float barHeight = 40;
-        Raylib.DrawRectangle(0, Raylib.GetScreenHeight() - (int)barHeight, Raylib.GetScreenWidth(), (int)barHeight,
-            Color.DarkGray);
-        
-        Color[] channelColors = {
-            Color.DarkGray,
-            Raylib.GetColor(0x880000FF),
-            Raylib.GetColor(0x008800FF),
-            Raylib.GetColor(0x000088FF),
-            Color.Black
-        };
-        Raylib.DrawRectanglePro(
-            new(Raylib.GetScreenWidth() / 2 - 100, Raylib.GetScreenHeight() - barHeight, 200, barHeight),
-            Vector2.Zero,
-            0, channelColors[_channelMode]);
-        Raylib.DrawRectangleGradientV(0,Raylib.GetScreenHeight()- (int)barHeight, Raylib.GetScreenWidth(), 4, Raylib.GetColor(0x111111ff), Color.Blank);
-        var textTopMargin = Raylib.GetScreenHeight() - 40 + 5;
-        const float infoUnit = 55;
-        const float fontSize = 30;
-        //Draw pixel info
-        var pixelPos = GetPixelUnderMouse();
-        var pixelIsInImage = pixelPos.X >= 0 && pixelPos.Y >= 0 && pixelPos.X < _image.Width &&
-                             pixelPos.Y < _image.Height;
-        Raylib.TraceLog(TraceLogLevel.Debug, "DrawHud");
-        var pixelColor = pixelIsInImage
-            ? Raylib.GetImageColor(_image, (int)pixelPos.X, (int)pixelPos.Y)
-            : new Color(0, 0, 0, 0);
-        DrawPixelColorInfo(pixelColor, infoUnit, textTopMargin, fontSize);
-        if (_enableMagnifiedView) {
-            DrawMagnifiedView(barHeight, pixelColor);
-        }
+        if (!_helpVisible) {
+            // Draw a Gray Rectangle that's 40 pixels high at the bottom of the screen
+            const float barHeight = 40;
+            Raylib.DrawRectangle(0, Raylib.GetScreenHeight() - (int)barHeight, Raylib.GetScreenWidth(), (int)barHeight,
+                Color.DarkGray);
 
-        string zoomText = "x";
-        zoomText += (_cam.Zoom < 1) ? "1/" + (1 / _cam.Zoom) : _cam.Zoom.ToString("F2");
-        Raylib.DrawTextEx(
-            _regularFont, zoomText,
-            new Vector2(10, textTopMargin),
-            fontSize, 1, Color.White);
-        // Draw Pixel Coordinates in integers in the center of the UI bar
-        string coordText = $"{(int)pixelPos.X} \t {(int)pixelPos.Y}";
-        // Pixel Coordinates
-        Raylib.DrawTextEx(
-            _regularFont,
-            coordText,
-            new Vector2(
-                Raylib.GetScreenWidth() / 2 - Raylib.MeasureTextEx(_regularFont, coordText, fontSize, 1).X / 2,
-                textTopMargin),
-            fontSize, 1, Color.White);
+            Color[] channelColors = {
+                Color.DarkGray,
+                Raylib.GetColor(0x880000FF),
+                Raylib.GetColor(0x008800FF),
+                Raylib.GetColor(0x000088FF),
+                Color.Black
+            };
+            Raylib.DrawRectanglePro(
+                new(Raylib.GetScreenWidth() / 2 - 100, Raylib.GetScreenHeight() - barHeight, 200, barHeight),
+                Vector2.Zero,
+                0, channelColors[_channelMode]);
+            Raylib.DrawRectangleGradientV(0, Raylib.GetScreenHeight() - (int)barHeight, Raylib.GetScreenWidth(), 4,
+                Raylib.GetColor(0x111111ff), Color.Blank);
+            var textTopMargin = Raylib.GetScreenHeight() - 40 + 5;
+            const float infoUnit = 55;
+            const float fontSize = 30;
+            //Draw pixel info
+            var pixelPos = GetPixelUnderMouse();
+            var pixelIsInImage = pixelPos.X >= 0 && pixelPos.Y >= 0 && pixelPos.X < _image.Width &&
+                                 pixelPos.Y < _image.Height;
+            Raylib.TraceLog(TraceLogLevel.Debug, "DrawHud");
+            var pixelColor = pixelIsInImage
+                ? Raylib.GetImageColor(_image, (int)pixelPos.X, (int)pixelPos.Y)
+                : new Color(0, 0, 0, 0);
+            DrawPixelColorInfo(pixelColor, infoUnit, textTopMargin, fontSize);
+            if (_enableMagnifiedView) {
+                DrawMagnifiedView(barHeight, pixelColor);
+            }
+
+            string zoomText = "x";
+            zoomText += (_cam.Zoom < 1) ? "1/" + (1 / _cam.Zoom) : _cam.Zoom.ToString("F2");
+            Raylib.DrawTextEx(
+                _regularFont, zoomText,
+                new Vector2(10, textTopMargin),
+                fontSize, 1, Color.White);
+            // Draw Pixel Coordinates in integers in the center of the UI bar
+            string coordText = $"{(int)pixelPos.X} \t {(int)pixelPos.Y}";
+            // Pixel Coordinates
+            Raylib.DrawTextEx(
+                _regularFont,
+                coordText,
+                new Vector2(
+                    Raylib.GetScreenWidth() / 2 - Raylib.MeasureTextEx(_regularFont, coordText, fontSize, 1).X / 2,
+                    textTopMargin),
+                fontSize, 1, Color.White);
+            _messageBox.Draw();
+        }
+        else {
+            Raylib.DrawRectangle(20,20, Raylib.GetScreenWidth()-40, Raylib.GetScreenHeight()-40, _bg1);
+            Raylib.DrawRectangleLinesEx(new Rectangle(20,20, Raylib.GetScreenWidth()-40, Raylib.GetScreenHeight()-40), 2, Color.White);
+            string helpText = "Welcome to rChannelViewer!\n\n" +
+                              "Controls:\n" +
+                              "- F1: Toggle this help\n" +
+                              "- Mouse Wheel: Zoom in/out\n" +
+                              "- Left Mouse Button: Pan\n" +
+                              "- Right Mouse Button: Jump to pixel under mouse\n" +
+                              "- Space: Recenter view\n" +
+                              "- 1/2/3/4/5: Switch to Red/Green/Blue/Alpha/Full channel view\n" +
+                              "- Up/Down Arrow: Change color format (Hex, RGB, HSV, Float RGB)\n" +
+                              "- Left/Right Arrow: Change coordinate format (WIP)\n" + //TODO implement coordinate format change
+                              "- Tab: Toggle magnified pixel view\n" +
+                              "- Alt+LMB: Pick color from image in the active color format (WIP)\n\n" + //TODO implement color picker
+                              "Drag and drop an image file onto the window to load it.\n";
+            RaylibHelpers.DrawTextBoxed(ref _regularFont, helpText,
+                new Rectangle(40, 40, Raylib.GetScreenWidth() - 80, Raylib.GetScreenHeight() - 80), 24, 1,
+                Color.White, true);
+        }
     }
 
     private static void DrawMagnifiedView(float barHeight, Color pixelColor) {
@@ -410,7 +442,7 @@ public static class Program {
 
     static Vector2 GetPixelUnderMouse() {
         Vector2 r = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), _cam);
-        return r with{X = (int)r.X, Y = (int)r.Y};
+        return r with { X = (int)r.X, Y = (int)r.Y };
     }
 
     static void DrawBackground() {
@@ -425,10 +457,10 @@ public static class Program {
     static void LoadNewTexture(string path) {
         Image fullTextureImage = Raylib.LoadImage(path);
         if (fullTextureImage.Width == 0 || fullTextureImage.Height == 0) {
-            MessageBox.Show("Failed to load image: " + path, "Error", MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            _messageBox.SetMessage("Failed to load image: " + path, 8.0f);
             return;
         }
+
         int totalPixels = fullTextureImage.Width * fullTextureImage.Height;
         int processedPixels = 0;
         Image redChannelImage = Raylib.ImageCopy(fullTextureImage);
@@ -441,6 +473,7 @@ public static class Program {
                     float progress = processedPixels / (float)totalPixels;
                     DrawLoadingScreen(progress);
                 }
+
                 Color pixelColor = Raylib.GetImageColor(fullTextureImage, x, y);
                 // Red channel
                 Raylib.ImageDrawPixel(ref redChannelImage, x, y,
@@ -457,6 +490,7 @@ public static class Program {
                 processedPixels++;
             }
         }
+
         _channels[0] = Raylib.LoadTextureFromImage(fullTextureImage);
         _channels[1] = Raylib.LoadTextureFromImage(redChannelImage);
         _channels[2] = Raylib.LoadTextureFromImage(greenChannelImage);
@@ -471,13 +505,15 @@ public static class Program {
         foreach (var t in _channels) {
             Raylib.SetTextureWrap(t, TextureWrap.Clamp);
         }
+
         _cam.Target = new Vector2(fullTextureImage.Width / 2, fullTextureImage.Height / 2);
-        float zoomX = Raylib.GetScreenWidth() -100 / (float)fullTextureImage.Width;
+        float zoomX = Raylib.GetScreenWidth() - 100 / (float)fullTextureImage.Width;
         float zoomY = (Raylib.GetScreenHeight() - 100) / (float)fullTextureImage.Height;
         float favoredZoom = MathF.Min(zoomX, zoomY);
-        for (float z = 64; z > favoredZoom && z > 1/16f; z /= 2) {
-            _cam.Zoom = z/2;
+        for (float z = 64; z > favoredZoom && z > 1 / 16f; z /= 2) {
+            _cam.Zoom = z / 2;
         }
+        _messageBox.SetMessage("Succesfully opened image.", 1.0f);
     }
 
     static void LoadDefaultTexture() {
@@ -491,7 +527,7 @@ public static class Program {
         _channels[4] = Raylib.LoadTextureFromImage(fauxChannelTexture);
         Raylib.UnloadImage(fauxFullTexture);
     }
-    
+
     static void DrawLoadingScreen(float progress) {
         Raylib.BeginDrawing();
         DrawBackground();
@@ -499,7 +535,7 @@ public static class Program {
         const float barHeight = 30;
         float x = (Raylib.GetScreenWidth() - barWidth) / 2;
         float y = (Raylib.GetScreenHeight() - barHeight) / 2;
-        Raylib.DrawRectangle((int)x-5, (int)y-5, (int)barWidth+10, (int)barHeight+10, Color.White);
+        Raylib.DrawRectangle((int)x - 5, (int)y - 5, (int)barWidth + 10, (int)barHeight + 10, Color.White);
         Raylib.DrawRectangle((int)x, (int)y, (int)barWidth, (int)barHeight, Color.DarkGray);
         Raylib.DrawRectangle((int)x, (int)y, (int)(barWidth * progress), (int)barHeight, Color.LightGray);
         Raylib.EndDrawing();
