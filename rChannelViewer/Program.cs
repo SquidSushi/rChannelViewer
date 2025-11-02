@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Windows.Forms;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices.JavaScript;
 using System.Text.Json;
 
 // dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true -p:SelfContained=false 
@@ -95,8 +96,9 @@ public static class Program {
         _regularFont = Raylib.LoadFontEx("Roboto-Bold.ttf", 30, null, 0);
         _monoFont = Raylib.LoadFontEx("RobotoMono-VariableFont_wght.ttf", 30, null, 0);
         _messageBox = new Message_Box(_regularFont);
-        _messageBox.SetMessage("Welcome to rChannelViewer!\nPress F1 for help.\nDrag & drop a file into this window to open it.", 5.0f);
-        _magnifiedRenderTexture = Raylib.LoadRenderTexture(8 * 15, 8 * 15);
+        _messageBox.SetMessage(
+            "Welcome to rChannelViewer!\nPress F1 for help.\nDrag & drop a file into this window to open it.", 5.0f);
+        _magnifiedRenderTexture = Raylib.LoadRenderTexture(8 * 15 * 2, 8 * 15 * 2);
 
 
         // Check if a file path is passed as an argument
@@ -114,6 +116,7 @@ public static class Program {
             if (Raylib.IsKeyPressed(KeyboardKey.Tab)) {
                 _enableMagnifiedView = !_enableMagnifiedView;
             }
+
             if (Raylib.IsKeyPressed(KeyboardKey.F1)) {
                 _helpVisible = !_helpVisible;
             }
@@ -262,15 +265,19 @@ public static class Program {
             const float fontSize = 30;
             //Draw pixel info
             var pixelPos = GetPixelUnderMouse();
-            var pixelIsInImage = pixelPos.X >= 0 && pixelPos.Y >= 0 && pixelPos.X < _image.Width &&
+            var pixelIsInImage = pixelPos is { X: >= 0, Y: >= 0 } && pixelPos.X < _image.Width &&
                                  pixelPos.Y < _image.Height;
             Raylib.TraceLog(TraceLogLevel.Debug, "DrawHud");
             var pixelColor = pixelIsInImage
                 ? Raylib.GetImageColor(_image, (int)pixelPos.X, (int)pixelPos.Y)
                 : new Color(0, 0, 0, 0);
             DrawPixelColorInfo(pixelColor, infoUnit, textTopMargin, fontSize);
-            if (_enableMagnifiedView) {
-                DrawMagnifiedView(barHeight, pixelColor);
+
+            if (Raylib.IsKeyDown(KeyboardKey.LeftAlt) || Raylib.IsKeyDown(KeyboardKey.RightAlt) && pixelIsInImage) {
+                DrawMagnifiedView();
+                if (Raylib.IsMouseButtonPressed(MouseButton.Left)) {
+                    PickColor();
+                }
             }
 
             string zoomText = "x";
@@ -292,8 +299,9 @@ public static class Program {
             _messageBox.Draw();
         }
         else {
-            Raylib.DrawRectangle(20,20, Raylib.GetScreenWidth()-40, Raylib.GetScreenHeight()-40, _bg1);
-            Raylib.DrawRectangleLinesEx(new Rectangle(20,20, Raylib.GetScreenWidth()-40, Raylib.GetScreenHeight()-40), 2, Color.White);
+            Raylib.DrawRectangle(20, 20, Raylib.GetScreenWidth() - 40, Raylib.GetScreenHeight() - 40, _bg1);
+            Raylib.DrawRectangleLinesEx(
+                new Rectangle(20, 20, Raylib.GetScreenWidth() - 40, Raylib.GetScreenHeight() - 40), 2, Color.White);
             string helpText = "Welcome to rChannelViewer!\n\n" +
                               "Controls:\n" +
                               "- F1: Toggle this help\n" +
@@ -313,17 +321,47 @@ public static class Program {
         }
     }
 
-    private static void DrawMagnifiedView(float barHeight, Color pixelColor) {
+    private static void PickColor() {
+        Vector2 mousePixel = GetPixelUnderMouse();
+        Color pixelColor = Raylib.GetImageColor(_image, (int)mousePixel.X, (int)mousePixel.Y);
+        string pickedColorText = "";
+        switch (_colorModel) {
+            case ColorModel.hex:
+            default:
+                pickedColorText = $"#{pixelColor.R:X2}{pixelColor.G:X2}{pixelColor.B:X2}{pixelColor.A:X2}";
+                break;
+            case ColorModel.rgb:
+                pickedColorText = $"{pixelColor.R}, {pixelColor.G}, {pixelColor.B}, {pixelColor.A}";
+                break;
+            case ColorModel.hsv:
+                var hsv = Raylib.ColorToHSV(pixelColor);
+                pickedColorText = $"{hsv.X:N0}, {(hsv.Y * 100f):N0}%, {(hsv.Z * 100f):N0}%, {pixelColor.A / 255f * 100:N2}";
+                break;
+            case ColorModel.floatrgb:
+                pickedColorText = $"{(pixelColor.R / 255f):F2}, {(pixelColor.G / 255f):F2}, {(pixelColor.B / 255f):F2,} {(pixelColor.A / 255f):F2}";
+                break;
+        }
+        Raylib.SetClipboardText(pickedColorText);
+        _messageBox.SetMessage($"Picked color: {pickedColorText}\n(Copied to clipboard)", 2.0f);
+    }
+
+    private static void DrawMagnifiedView() {
         // Draw Zoomed preview of pixel under mouse
-        const float magnificationFactor = 8f;
-        const int areaSize = 15; // in pixels
+        const float magnificationFactor = 16f;
 
         Vector2 mousePixel = GetPixelUnderMouse();
+        Color pixelColor = Raylib.GetImageColor(_image, (int)mousePixel.X, (int)mousePixel.Y);
         bool isPixelDark = (pixelColor.R + pixelColor.G + pixelColor.B) / 3 < 128;
 
 
         Raylib.BeginTextureMode(_magnifiedRenderTexture);
         Raylib.ClearBackground(Color.Blank);
+        Raylib.BeginBlendMode(BlendMode.Alpha);
+        Raylib.DrawTexturePro(_backgroundTexture,
+            new Rectangle((float)Raylib.GetTime() * 25 % 200, 0, _magnifiedRenderTexture.Texture.Width,
+                _magnifiedRenderTexture.Texture.Height),
+            new Rectangle(0, 0, _magnifiedRenderTexture.Texture.Width, _magnifiedRenderTexture.Texture.Height),
+            Vector2.Zero, 0, Color.White);
         Camera2D magnifyCam = new Camera2D() {
             Offset = new Vector2(_magnifiedRenderTexture.Texture.Width / 2,
                 _magnifiedRenderTexture.Texture.Height / 2),
@@ -332,6 +370,7 @@ public static class Program {
             Zoom = magnificationFactor
         };
         Raylib.BeginMode2D(magnifyCam);
+
         Raylib.DrawTexturePro(_channels[0],
             new Rectangle(0, 0, _image.Width, _image.Height),
             new Rectangle(0, 0, _image.Width, _image.Height),
@@ -343,14 +382,22 @@ public static class Program {
             new Rectangle(_magnifiedRenderTexture.Texture.Width / 2 - pixelSize / 2,
                 _magnifiedRenderTexture.Texture.Height / 2 - pixelSize / 2, pixelSize, pixelSize), 1,
             isPixelDark ? Color.White : Color.Black);
+        Raylib.EndBlendMode();
         Raylib.EndTextureMode();
+        // Draw magnified texture right on the mouse Cursor
+        Vector2 mousePos = Raylib.GetMousePosition();
+        Rectangle destRect = new Rectangle(mousePos.X - _magnifiedRenderTexture.Texture.Width / 2,
+            mousePos.Y - _magnifiedRenderTexture.Texture.Height / 2, _magnifiedRenderTexture.Texture.Width,
+            _magnifiedRenderTexture.Texture.Height);
         Raylib.DrawTexturePro(_magnifiedRenderTexture.Texture,
-            new Rectangle(0, 0, _magnifiedRenderTexture.Texture.Width,
-                -_magnifiedRenderTexture.Texture.Height),
-            new Rectangle(Raylib.GetScreenWidth() - _magnifiedRenderTexture.Texture.Width - 10,
-                Raylib.GetScreenHeight() - barHeight - _magnifiedRenderTexture.Texture.Height - 10,
-                _magnifiedRenderTexture.Texture.Width, _magnifiedRenderTexture.Texture.Height),
-            Vector2.Zero, 0, Color.White);
+            new Rectangle(0, 0, _magnifiedRenderTexture.Texture.Width, -_magnifiedRenderTexture.Texture.Height),
+            destRect, Vector2.Zero, 0, Color.White);
+        const float borderThickness = 8;
+        destRect.X -= borderThickness;
+        destRect.Y -= borderThickness;
+        destRect.Width += borderThickness * 2;
+        destRect.Height += borderThickness * 2;
+        Raylib.DrawRectangleLinesEx(destRect, borderThickness, pixelColor with { A = 255 });
     }
 
     static string GetChannelInModel(byte x) {
@@ -513,6 +560,7 @@ public static class Program {
         for (float z = 64; z > favoredZoom && z > 1 / 16f; z /= 2) {
             _cam.Zoom = z / 2;
         }
+
         _messageBox.SetMessage("Succesfully opened image.", 1.0f);
     }
 
