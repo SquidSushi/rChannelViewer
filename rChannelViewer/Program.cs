@@ -167,23 +167,23 @@ public static class Program {
     }
 
     private static void UpdateSelectedChannel() {
-        if (Raylib.IsKeyPressed(KeyboardKey.F) || Raylib.IsKeyPressed(KeyboardKey.Five)) {
+        if (Raylib.IsKeyPressed(KeyboardKey.Five)) {
             _channelMode = 0;
         }
 
-        if (Raylib.IsKeyPressed(KeyboardKey.R) || Raylib.IsKeyPressed(KeyboardKey.One)) {
+        if (Raylib.IsKeyPressed(KeyboardKey.One)) {
             _channelMode = 1;
         }
 
-        if (Raylib.IsKeyPressed(KeyboardKey.G) || Raylib.IsKeyPressed(KeyboardKey.Two)) {
+        if (Raylib.IsKeyPressed(KeyboardKey.Two)) {
             _channelMode = 2;
         }
 
-        if (Raylib.IsKeyPressed(KeyboardKey.B) || Raylib.IsKeyPressed(KeyboardKey.Three)) {
+        if (Raylib.IsKeyPressed(KeyboardKey.Three)) {
             _channelMode = 3;
         }
 
-        if (Raylib.IsKeyPressed(KeyboardKey.A) || Raylib.IsKeyPressed(KeyboardKey.Four)) {
+        if (Raylib.IsKeyPressed(KeyboardKey.Four)) {
             _channelMode = 4;
         }
     }
@@ -312,8 +312,9 @@ public static class Program {
                               "- 1/2/3/4/5: Switch to Red/Green/Blue/Alpha/Full channel view\n" +
                               "- Up/Down Arrow: Change color format (Hex, RGB, HSV, Float RGB)\n" +
                               "- Left/Right Arrow: Change coordinate format (WIP)\n" + //TODO implement coordinate format change
-                              "- Tab: Toggle magnified pixel view\n" +
-                              "- Alt+LMB: Pick color from image in the active color format (WIP)\n\n" + //TODO implement color picker
+                              "- Alt: Hold for magnified view\n" +
+                              "- Alt+LMB: Pick color from image in the active color format\n" + 
+                              "- Esc: Terminate the app\n\n" +
                               "Drag and drop an image file onto the window to load it.\n";
             RaylibHelpers.DrawTextBoxed(ref _regularFont, helpText,
                 new Rectangle(40, 40, Raylib.GetScreenWidth() - 80, Raylib.GetScreenHeight() - 80), 24, 1,
