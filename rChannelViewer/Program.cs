@@ -18,14 +18,21 @@ public static class Program {
     private static Message_Box _messageBox;
     static Texture2D[] _channels = new Texture2D[5];
 
-    public enum ColorModel {
+    public enum ColorFormat {
         hex,
         rgb,
         hsv,
         floatrgb
     };
+    public enum CoordinateFormat {
+        absolute,
+        relative,
+        absoluteUp,
+        relativeUp
+    }
 
-    private static ColorModel _colorModel = ColorModel.hex;
+    private static ColorFormat _colorFormat = ColorFormat.hex;
+    private static CoordinateFormat _coordinateFormat = CoordinateFormat.absolute;
 
     // O <- Full image
     // 1 <- Red
@@ -79,7 +86,8 @@ public static class Program {
                 var config = JsonSerializer.Deserialize<RcvConfig>(configJson);
                 if (config != null) {
                     _enableMagnifiedView = config._enableMagnifiedView;
-                    _colorModel = config._colorModel;
+                    _colorFormat = config.ColorFormat;
+                    _coordinateFormat = config.CoordinateFormat;
                     GenerateBackgroundTexture(HexToColor(config.bg1), HexToColor(config.bg2));
                 }
             }
@@ -112,6 +120,7 @@ public static class Program {
             UpdateCamera();
             UpdateSelectedChannel();
             UpdateSelectedColorFormat();
+            UpdateSelectedCoordinateFormat();
             _messageBox.Update();
             if (Raylib.IsKeyPressed(KeyboardKey.Tab)) {
                 _enableMagnifiedView = !_enableMagnifiedView;
@@ -132,12 +141,28 @@ public static class Program {
         // Save config on exit
         var saveConfig = new RcvConfig {
             _enableMagnifiedView = _enableMagnifiedView,
-            _colorModel = _colorModel,
+            ColorFormat = _colorFormat,
+            CoordinateFormat = _coordinateFormat,
             bg1 = ColorToHex(_bg1),
             bg2 = ColorToHex(_bg2)
         };
         string saveJson = JsonSerializer.Serialize(saveConfig);
         File.WriteAllText("config.json", saveJson);
+    }
+
+    private static void UpdateSelectedCoordinateFormat() {
+        if (Raylib.IsKeyPressed(KeyboardKey.Right)) {
+            _coordinateFormat++;
+            if ((int)_coordinateFormat > Enum.GetValues(typeof(CoordinateFormat)).Length - 1) {
+                _coordinateFormat = 0;
+            }
+        }
+        if (Raylib.IsKeyPressed(KeyboardKey.Left)) {
+            _coordinateFormat--;
+            if ((int)_coordinateFormat < 0) {
+                _coordinateFormat = (CoordinateFormat)(Enum.GetValues(typeof(CoordinateFormat)).Length - 1);
+            }
+        }
     }
 
     // Helper: try to return assembly version or fallback to assembly file last-write timestamp
@@ -152,16 +177,16 @@ public static class Program {
 
     private static void UpdateSelectedColorFormat() {
         if (Raylib.IsKeyPressed(KeyboardKey.Down)) {
-            _colorModel += 1;
-            if ((int)_colorModel > Enum.GetValues(typeof(ColorModel)).Length - 1) {
-                _colorModel = 0;
+            _colorFormat += 1;
+            if ((int)_colorFormat > Enum.GetValues(typeof(ColorFormat)).Length - 1) {
+                _colorFormat = 0;
             }
         }
 
         if (Raylib.IsKeyPressed(KeyboardKey.Up)) {
-            _colorModel -= 1;
-            if ((int)_colorModel < 0) {
-                _colorModel = (ColorModel)(Enum.GetValues(typeof(ColorModel)).Length - 1);
+            _colorFormat -= 1;
+            if ((int)_colorFormat < 0) {
+                _colorFormat = (ColorFormat)(Enum.GetValues(typeof(ColorFormat)).Length - 1);
             }
         }
     }
@@ -255,7 +280,7 @@ public static class Program {
                 Color.Black
             };
             Raylib.DrawRectanglePro(
-                new(Raylib.GetScreenWidth() / 2 - 100, Raylib.GetScreenHeight() - barHeight, 200, barHeight),
+                new(Raylib.GetScreenWidth() / 2 - 150, Raylib.GetScreenHeight() - barHeight, 300, barHeight),
                 Vector2.Zero,
                 0, channelColors[_channelMode]);
             Raylib.DrawRectangleGradientV(0, Raylib.GetScreenHeight() - (int)barHeight, Raylib.GetScreenWidth(), 4,
@@ -267,7 +292,7 @@ public static class Program {
             var pixelPos = GetPixelUnderMouse();
             var pixelIsInImage = pixelPos is { X: >= 0, Y: >= 0 } && pixelPos.X < _image.Width &&
                                  pixelPos.Y < _image.Height;
-            Raylib.TraceLog(TraceLogLevel.Debug, "DrawHud");
+            //Raylib.TraceLog(TraceLogLevel.Debug, "DrawHud");
             var pixelColor = pixelIsInImage
                 ? Raylib.GetImageColor(_image, (int)pixelPos.X, (int)pixelPos.Y)
                 : new Color(0, 0, 0, 0);
@@ -287,7 +312,7 @@ public static class Program {
                 new Vector2(10, textTopMargin),
                 fontSize, 1, Color.White);
             // Draw Pixel Coordinates in integers in the center of the UI bar
-            string coordText = $"{(int)pixelPos.X} \t {(int)pixelPos.Y}";
+            var coordText = CoordText(pixelPos);
             // Pixel Coordinates
             Raylib.DrawTextEx(
                 _regularFont,
@@ -322,23 +347,37 @@ public static class Program {
         }
     }
 
+    private static string CoordText(Vector2 pixelPos) {
+        switch (_coordinateFormat) {
+            case CoordinateFormat.absolute:
+            default:
+                return $"X: {(int)pixelPos.X}, Y: {(int)pixelPos.Y}";
+            case CoordinateFormat.relative:
+                return $"X: {(pixelPos.X / _image.Width):G4}, Y: {(pixelPos.Y / _image.Height):G4}";
+            case CoordinateFormat.absoluteUp:
+                return $"X: {(int)pixelPos.X}, Y: {(int)(_image.Height - pixelPos.Y)}";
+            case CoordinateFormat.relativeUp:
+                return $"X: {(pixelPos.X / _image.Width):G5}, Y: {((_image.Height - pixelPos.Y) / _image.Height):G5}";
+        }
+    }
+
     private static void PickColor() {
         Vector2 mousePixel = GetPixelUnderMouse();
         Color pixelColor = Raylib.GetImageColor(_image, (int)mousePixel.X, (int)mousePixel.Y);
         string pickedColorText = "";
-        switch (_colorModel) {
-            case ColorModel.hex:
+        switch (_colorFormat) {
+            case ColorFormat.hex:
             default:
                 pickedColorText = $"#{pixelColor.R:X2}{pixelColor.G:X2}{pixelColor.B:X2}{pixelColor.A:X2}";
                 break;
-            case ColorModel.rgb:
+            case ColorFormat.rgb:
                 pickedColorText = $"{pixelColor.R}, {pixelColor.G}, {pixelColor.B}, {pixelColor.A}";
                 break;
-            case ColorModel.hsv:
+            case ColorFormat.hsv:
                 var hsv = Raylib.ColorToHSV(pixelColor);
                 pickedColorText = $"{hsv.X:N0}, {(hsv.Y * 100f):N0}%, {(hsv.Z * 100f):N0}%, {pixelColor.A / 255f * 100:N2}";
                 break;
-            case ColorModel.floatrgb:
+            case ColorFormat.floatrgb:
                 pickedColorText = $"{(pixelColor.R / 255f):F2}, {(pixelColor.G / 255f):F2}, {(pixelColor.B / 255f):F2,} {(pixelColor.A / 255f):F2}";
                 break;
         }
@@ -402,20 +441,20 @@ public static class Program {
     }
 
     static string GetChannelInModel(byte x) {
-        return _colorModel switch {
-            ColorModel.hex => x.ToString("X2"),
-            ColorModel.rgb => x.ToString(),
-            ColorModel.hsv => (x / 255f * 100f).ToString("N0"), // Placeholder)
-            ColorModel.floatrgb => (x / 255f).ToString("F2"),
+        return _colorFormat switch {
+            ColorFormat.hex => x.ToString("X2"),
+            ColorFormat.rgb => x.ToString(),
+            ColorFormat.hsv => (x / 255f * 100f).ToString("N0"), // Placeholder)
+            ColorFormat.floatrgb => (x / 255f).ToString("F2"),
             _ => x.ToString()
         };
     }
 
     private static void DrawPixelColorInfo(Color pixelColor, float infoUnit, float topMargin,
         float fontSize) {
-        if (_colorModel != ColorModel.hsv) {
-            Font font = _colorModel == ColorModel.hex ? _monoFont : _regularFont;
-            infoUnit = _colorModel == ColorModel.hex
+        if (_colorFormat != ColorFormat.hsv) {
+            Font font = _colorFormat == ColorFormat.hex ? _monoFont : _regularFont;
+            infoUnit = _colorFormat == ColorFormat.hex
                 ? Raylib.MeasureTextEx(_monoFont, "00", fontSize, 1).X
                 : infoUnit;
             // Alpha
