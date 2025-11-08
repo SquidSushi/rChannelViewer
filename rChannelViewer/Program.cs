@@ -351,13 +351,13 @@ public static class Program {
         switch (_coordinateFormat) {
             case CoordinateFormat.absolute:
             default:
-                return $"X: {(int)pixelPos.X}, Y: {(int)pixelPos.Y}";
+                return $"{(int)pixelPos.X} : {(int)pixelPos.Y}";
             case CoordinateFormat.relative:
-                return $"X: {(pixelPos.X / _image.Width):G4}, Y: {(pixelPos.Y / _image.Height):G4}";
+                return $"{(pixelPos.X / _image.Width):G4} : {(pixelPos.Y / _image.Height):G4}";
             case CoordinateFormat.absoluteUp:
-                return $"X: {(int)pixelPos.X}, Y: {(int)(_image.Height - pixelPos.Y)}";
+                return $"{(int)pixelPos.X} : {(int)(_image.Height - pixelPos.Y)}";
             case CoordinateFormat.relativeUp:
-                return $"X: {(pixelPos.X / _image.Width):G5}, Y: {((_image.Height - pixelPos.Y) / _image.Height):G5}";
+                return $"{(pixelPos.X / _image.Width):G5} : {((_image.Height - pixelPos.Y) / _image.Height):G5}";
         }
     }
 
