@@ -72,17 +72,52 @@ public static class Program {
     }
 
     static void Main(string[] args) {
+        // Ensure resources (fonts, config, icon.png, etc.) are loaded from the executable directory
+        // even when the app is launched via "Open with" which changes the working directory to the
+        // file being opened. We also normalize any incoming file argument to an absolute path so
+        // it still resolves correctly after we change the current directory.
+        string initialWorkingDir = Directory.GetCurrentDirectory();
+        if (args.Length > 0) {
+            for (int i = 0; i < args.Length; i++) {
+                try {
+                    if (!Path.IsPathRooted(args[i])) {
+                        args[i] = Path.GetFullPath(args[i], initialWorkingDir);
+                    } else {
+                        args[i] = Path.GetFullPath(args[i]);
+                    }
+                }
+                catch {
+                    // If path normalization fails, leave the arg as-is (later code will handle errors)
+                }
+            }
+        }
+
+        // Record the executable directory and prefer explicit paths when loading resources
+        string exeDir = AppContext.BaseDirectory;
+
+        try {
+            Directory.SetCurrentDirectory(exeDir);
+        }
+        catch {
+            // If we can't change the directory for any reason, continue — relative loads may fail.
+        }
+
         Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
         Raylib.InitWindow(1280, 720, $"rChannelViewer v{GetBuildInfo()}");
-        Image icon = Raylib.LoadImage("icon.png");
-        Raylib.SetWindowIcon(icon);
-        Raylib.UnloadImage(icon);
+        // Load icon explicitly from the exe folder
+        string iconPath = Path.Combine(exeDir, "icon.png");
+        if (File.Exists(iconPath)) {
+            Image icon = Raylib.LoadImage(iconPath);
+            Raylib.SetWindowIcon(icon);
+            Raylib.UnloadImage(icon);
+        }
         Raylib.SetTargetFPS(120);
         // Look for a config.json file in the executable directory
-        if (File.Exists("config.json")) {
+        string configPath = Path.Combine(exeDir, "config.json");
+        if (File.Exists(configPath)) {
             // Load config
             try {
-                string configJson = File.ReadAllText("config.json");
+                string configJson = File.ReadAllText(configPath);
                 var config = JsonSerializer.Deserialize<RcvConfig>(configJson);
                 if (config != null) {
                     _enableMagnifiedView = config._enableMagnifiedView;
@@ -101,8 +136,9 @@ public static class Program {
 
 
         LoadDefaultTexture();
-        _regularFont = Raylib.LoadFontEx("Roboto-Bold.ttf", 30, null, 0);
-        _monoFont = Raylib.LoadFontEx("RobotoMono-VariableFont_wght.ttf", 30, null, 0);
+        // Load fonts explicitly from the exe folder so this works regardless of current directory
+        _regularFont = Raylib.LoadFontEx(Path.Combine(exeDir, "Roboto-Bold.ttf"), 30, null, 0);
+        _monoFont = Raylib.LoadFontEx(Path.Combine(exeDir, "RobotoMono-VariableFont_wght.ttf"), 30, null, 0);
         _messageBox = new Message_Box(_regularFont);
         _messageBox.SetMessage(
             "Welcome to rChannelViewer!\nPress F1 for help.\nDrag & drop a file into this window to open it.", 5.0f);
@@ -138,7 +174,7 @@ public static class Program {
             Draw();
         }
 
-        // Save config on exit
+        // Save config on exit to the executable directory
         var saveConfig = new RcvConfig {
             _enableMagnifiedView = _enableMagnifiedView,
             ColorFormat = _colorFormat,
@@ -147,7 +183,7 @@ public static class Program {
             bg2 = ColorToHex(_bg2)
         };
         string saveJson = JsonSerializer.Serialize(saveConfig);
-        File.WriteAllText("config.json", saveJson);
+        File.WriteAllText(configPath, saveJson);
     }
 
     private static void UpdateSelectedCoordinateFormat() {
