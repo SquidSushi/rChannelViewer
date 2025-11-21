@@ -306,21 +306,22 @@ public static class Program {
             // Draw a Gray Rectangle that's 40 pixels high at the bottom of the screen
             const float barHeight = 40;
             Raylib.DrawRectangle(0, Raylib.GetScreenHeight() - (int)barHeight, Raylib.GetScreenWidth(), (int)barHeight,
-                Color.DarkGray);
+                Raylib.GetColor(0x222222FF));
 
             Color[] channelColors = {
                 Color.DarkGray,
-                Raylib.GetColor(0x880000FF),
-                Raylib.GetColor(0x008800FF),
-                Raylib.GetColor(0x000088FF),
-                Color.Black
+                Raylib.GetColor(0xFF0000FF),
+                Raylib.GetColor(0x00FF00FF),
+                Raylib.GetColor(0x0000FFFF),
+                Raylib.GetColor(0xFF00FFFF),
             };
+            const float colorBandHeight = 2;
             Raylib.DrawRectanglePro(
-                new(Raylib.GetScreenWidth() / 2 - 150, Raylib.GetScreenHeight() - barHeight, 300, barHeight),
+                new(0, Raylib.GetScreenHeight() - barHeight-colorBandHeight, Raylib.GetScreenWidth(), colorBandHeight),
                 Vector2.Zero,
                 0, channelColors[_channelMode]);
-            Raylib.DrawRectangleGradientV(0, Raylib.GetScreenHeight() - (int)barHeight, Raylib.GetScreenWidth(), 4,
-                Raylib.GetColor(0x111111ff), Color.Blank);
+            Raylib.DrawRectangleGradientV(0, Raylib.GetScreenHeight() - (int)barHeight, Raylib.GetScreenWidth(), 6,
+                Raylib.ColorAlpha(Color.Black,0.5f), Color.Blank);
             var textTopMargin = Raylib.GetScreenHeight() - 40 + 5;
             const float infoUnit = 55;
             const float fontSize = 30;
@@ -328,7 +329,6 @@ public static class Program {
             var pixelPos = GetPixelUnderMouse();
             var pixelIsInImage = pixelPos is { X: >= 0, Y: >= 0 } && pixelPos.X < _image.Width &&
                                  pixelPos.Y < _image.Height;
-            //Raylib.TraceLog(TraceLogLevel.Debug, "DrawHud");
             var pixelColor = pixelIsInImage
                 ? Raylib.GetImageColor(_image, (int)pixelPos.X, (int)pixelPos.Y)
                 : new Color(0, 0, 0, 0);
