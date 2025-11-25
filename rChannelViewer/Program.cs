@@ -313,7 +313,7 @@ public static class Program {
                 Raylib.GetColor(0xFF0000FF),
                 Raylib.GetColor(0x00FF00FF),
                 Raylib.GetColor(0x0000FFFF),
-                Raylib.GetColor(0xFF00FFFF),
+                Raylib.GetColor(0xFFFFFFFF),
             };
             const float colorBandHeight = 2;
             Raylib.DrawRectanglePro(
