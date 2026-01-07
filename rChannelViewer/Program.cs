@@ -151,6 +151,22 @@ public static class Program {
         }
 
 
+        Loop();
+
+        // Save config on exit to the executable directory
+        var saveConfig = new RcvConfig {
+            _enableMagnifiedView = _enableMagnifiedView,
+            ColorFormat = _colorFormat,
+            CoordinateFormat = _coordinateFormat,
+            bg1 = ColorToHex(_bg1),
+            bg2 = ColorToHex(_bg2)
+        };
+        string saveJson = JsonSerializer.Serialize(saveConfig);
+        File.WriteAllText(configPath, saveJson);
+    }
+
+    private static void Loop()
+    {
         while (!Raylib.WindowShouldClose()) {
             // Logic
             UpdateCamera();
@@ -160,6 +176,14 @@ public static class Program {
             _messageBox.Update();
             if (Raylib.IsKeyPressed(KeyboardKey.Tab)) {
                 _enableMagnifiedView = !_enableMagnifiedView;
+            }
+
+            if (Raylib.IsKeyDown(KeyboardKey.LeftControl) || Raylib.IsKeyDown(KeyboardKey.RightControl))
+            {
+                if (Raylib.IsKeyPressed(KeyboardKey.V))
+                {
+                    LoadNewTexture(Raylib.GetClipboardImage());
+                }
             }
 
             if (Raylib.IsKeyPressed(KeyboardKey.F1)) {
@@ -173,17 +197,6 @@ public static class Program {
             // Drawing
             Draw();
         }
-
-        // Save config on exit to the executable directory
-        var saveConfig = new RcvConfig {
-            _enableMagnifiedView = _enableMagnifiedView,
-            ColorFormat = _colorFormat,
-            CoordinateFormat = _coordinateFormat,
-            bg1 = ColorToHex(_bg1),
-            bg2 = ColorToHex(_bg2)
-        };
-        string saveJson = JsonSerializer.Serialize(saveConfig);
-        File.WriteAllText(configPath, saveJson);
     }
 
     private static void UpdateSelectedCoordinateFormat() {
@@ -581,6 +594,72 @@ public static class Program {
         Image fullTextureImage = Raylib.LoadImage(path);
         if (fullTextureImage.Width == 0 || fullTextureImage.Height == 0) {
             _messageBox.SetMessage("Failed to load image: " + path, 8.0f);
+            return;
+        }
+
+        int totalPixels = fullTextureImage.Width * fullTextureImage.Height;
+        int processedPixels = 0;
+        Image redChannelImage = Raylib.ImageCopy(fullTextureImage);
+        Image greenChannelImage = Raylib.ImageCopy(fullTextureImage);
+        Image blueChannelImage = Raylib.ImageCopy(fullTextureImage);
+        Image alphaChannelImage = Raylib.ImageCopy(fullTextureImage);
+        for (int x = 0; x < fullTextureImage.Width; x++) {
+            for (int y = 0; y < fullTextureImage.Height; y++) {
+                if (processedPixels % 100_000 == 99999) {
+                    float progress = processedPixels / (float)totalPixels;
+                    DrawLoadingScreen(progress);
+                }
+
+                Color pixelColor = Raylib.GetImageColor(fullTextureImage, x, y);
+                // Red channel
+                Raylib.ImageDrawPixel(ref redChannelImage, x, y,
+                    new Color(pixelColor.R, pixelColor.R, pixelColor.R, (byte)255));
+                // Green channel
+                Raylib.ImageDrawPixel(ref greenChannelImage, x, y,
+                    new Color(pixelColor.G, pixelColor.G, pixelColor.G, (byte)255));
+                // Blue channel
+                Raylib.ImageDrawPixel(ref blueChannelImage, x, y,
+                    new Color(pixelColor.B, pixelColor.B, pixelColor.B, (byte)255));
+                // Alpha channel
+                Raylib.ImageDrawPixel(ref alphaChannelImage, x, y,
+                    new Color(pixelColor.A, pixelColor.A, pixelColor.A, (byte)255));
+                processedPixels++;
+            }
+        }
+
+        _channels[0] = Raylib.LoadTextureFromImage(fullTextureImage);
+        _channels[1] = Raylib.LoadTextureFromImage(redChannelImage);
+        _channels[2] = Raylib.LoadTextureFromImage(greenChannelImage);
+        _channels[3] = Raylib.LoadTextureFromImage(blueChannelImage);
+        _channels[4] = Raylib.LoadTextureFromImage(alphaChannelImage);
+        Raylib.UnloadImage(_image);
+        _image = fullTextureImage;
+        Raylib.UnloadImage(redChannelImage);
+        Raylib.UnloadImage(greenChannelImage);
+        Raylib.UnloadImage(blueChannelImage);
+        Raylib.UnloadImage(alphaChannelImage);
+        foreach (var t in _channels) {
+            Raylib.SetTextureWrap(t, TextureWrap.Clamp);
+        }
+
+        _cam.Target = new Vector2(fullTextureImage.Width / 2, fullTextureImage.Height / 2);
+        float zoomX = Raylib.GetScreenWidth() - 100 / (float)fullTextureImage.Width;
+        float zoomY = (Raylib.GetScreenHeight() - 100) / (float)fullTextureImage.Height;
+        float favoredZoom = MathF.Min(zoomX, zoomY);
+        for (float z = 64; z > favoredZoom && z > 1 / 16f; z /= 2) {
+            _cam.Zoom = z / 2;
+        }
+
+        _messageBox.SetMessage("Succesfully opened image.", 1.0f);
+    }
+    
+    static void LoadNewTexture(Image image)
+    {
+        Image fullTextureImage = image;
+
+        if (fullTextureImage.Width == 0)
+        {
+            _messageBox.SetMessage("Pasting from Clipboard failed.",3);
             return;
         }
 
