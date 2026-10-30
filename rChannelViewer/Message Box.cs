@@ -82,7 +82,7 @@ public class Message_Box(Font font) {
     float _remainingTime = 0.0f; //time left to show message
     Font _font = font;
     
-    public void SetMessage(string message, float displayTime) {
+    public void DisplayMessage(string message, float displayTime) {
         _currentMessage = message;
         _remainingTime = displayTime;
         _t = 0.0f;

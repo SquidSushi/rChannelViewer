@@ -144,7 +144,7 @@ public static class Program{
         _regularFont = Raylib.LoadFontEx(Path.Combine(exeDir, "Roboto-Bold.ttf"), 30, null, 0);
         _monoFont = Raylib.LoadFontEx(Path.Combine(exeDir, "RobotoMono-VariableFont_wght.ttf"), 30, null, 0);
         _messageBox = new Message_Box(_regularFont);
-        _messageBox.SetMessage(
+        _messageBox.DisplayMessage(
             "Welcome to rChannelViewer!\nPress F1 for help.\nDrag & drop a file into this window to open it.", 5.0f);
         _magnifiedRenderTexture = Raylib.LoadRenderTexture(8 * 15 * 2, 8 * 15 * 2);
 
@@ -461,7 +461,7 @@ public static class Program{
         }
 
         Raylib.SetClipboardText(pickedColorText);
-        _messageBox.SetMessage($"Picked color: {pickedColorText}\n(Copied to clipboard)", 2.0f);
+        _messageBox.DisplayMessage($"Picked color: {pickedColorText}\n(Copied to clipboard)", 2.0f);
     }
 
     private static void DrawMagnifiedView(){
@@ -623,7 +623,7 @@ public static class Program{
     static void LoadNewTexture(string path){
         Image fullTextureImage = Raylib.LoadImage(path);
         if (fullTextureImage.Width == 0 || fullTextureImage.Height == 0){
-            _messageBox.SetMessage("Failed to load image: " + path, 8.0f);
+            _messageBox.DisplayMessage("Failed to load image: " + path, 8.0f);
             return;
         }
 
@@ -680,14 +680,14 @@ public static class Program{
             _cam.Zoom = z / 2;
         }
 
-        _messageBox.SetMessage("Succesfully opened image.", 1.0f);
+        _messageBox.DisplayMessage("Succesfully opened image.", 1.0f);
     }
 
     static void LoadNewTexture(Image image){
         Image fullTextureImage = image;
 
         if (fullTextureImage.Width == 0){
-            _messageBox.SetMessage("Pasting from Clipboard failed.", 3);
+            _messageBox.DisplayMessage("Pasting from Clipboard failed.", 3);
             return;
         }
 
@@ -744,7 +744,7 @@ public static class Program{
             _cam.Zoom = z / 2;
         }
 
-        _messageBox.SetMessage("Succesfully opened image.", 1.0f);
+        _messageBox.DisplayMessage("Succesfully opened image.", 1.0f);
     }
 
     static void LoadDefaultTexture(){
