@@ -329,8 +329,8 @@ public static class Program{
         float topmostpixel = MathF.Max((int)(_cam.Target.Y - Raylib.GetScreenHeight() / 2 / _cam.Zoom), 0);
         float bottommostpixel =
             MathF.Min((int)(_cam.Target.Y + Raylib.GetScreenHeight() / 2 / _cam.Zoom), _image.Height);
-        for (float x = leftmostpixel; x <= rightmostpixel; x++){
-            for (float y = topmostpixel; y <= bottommostpixel; y++){
+        for (float x = leftmostpixel; x < rightmostpixel; x++){
+            for (float y = topmostpixel; y < bottommostpixel; y++){
                 {
                     Raylib.DrawRectangleLinesEx(new Rectangle(x, y, 1, 1), 1 / _cam.Zoom,
                         Raylib.ColorAlpha(Color.Gray, 0.5f));
@@ -410,6 +410,7 @@ public static class Program{
                               "- Right Mouse Button: Jump to pixel under mouse\n" +
                               "- Space: Recenter view\n" +
                               "- 1/2/3/4/5: Switch to Red/Green/Blue/Alpha/Full channel view\n" +
+                              "- G: Toggle pixel grid (only visible when zoomed in 4x or more)\n" +
                               "- Up/Down Arrow: Change color format (Hex, RGB, HSV, Float RGB)\n" +
                               "- Left/Right Arrow: Change coordinate format (WIP)\n" + //TODO implement coordinate format change
                               "- Alt: Hold for magnified view\n" +
