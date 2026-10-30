@@ -45,6 +45,7 @@ public static class Program{
     private static bool _enableMagnifiedView = true;
     private static Color _bg1 = Raylib.GetColor(0x222222FF);
     private static Color _bg2 = Raylib.GetColor(0x111111FF);
+    private static Color _iconicMustardColor = Raylib.GetColor(0xf1c232ff);
 
     static Image _image;
 
@@ -768,7 +769,7 @@ public static class Program{
         float y = (Raylib.GetScreenHeight() - barHeight) / 2;
         Raylib.DrawRectangle((int)x - 5, (int)y - 5, (int)barWidth + 10, (int)barHeight + 10, Color.White);
         Raylib.DrawRectangle((int)x, (int)y, (int)barWidth, (int)barHeight, Color.DarkGray);
-        Raylib.DrawRectangle((int)x, (int)y, (int)(barWidth * progress), (int)barHeight, Color.LightGray);
+        Raylib.DrawRectangle((int)x, (int)y, (int)(barWidth * progress), (int)barHeight, _iconicMustardColor);
         Raylib.EndDrawing();
     }
 }
