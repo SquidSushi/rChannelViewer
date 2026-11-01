@@ -438,30 +438,34 @@ public static class Program{
                 fontSize, 1, Color.White);
             _messageBox.Draw();
         }
-        else{
-            Raylib.DrawRectangle(20, 20, Raylib.GetScreenWidth() - 40, Raylib.GetScreenHeight() - 40, _bg1);
-            Raylib.DrawRectangleLinesEx(
-                new Rectangle(20, 20, Raylib.GetScreenWidth() - 40, Raylib.GetScreenHeight() - 40), 2, Color.White);
-            string helpText = "Welcome to rChannelViewer!\n\n" +
-                              "Controls:\n" +
-                              "- F1: Toggle this help\n" +
-                              "- Mouse Wheel: Zoom in/out\n" +
-                              "- Left Mouse Button: Pan\n" +
-                              "- Right Mouse Button: Jump to pixel under mouse\n" +
-                              "- Space: Recenter view\n" +
-                              "- 1/2/3/4/5: Switch to Red/Green/Blue/Alpha/Full channel view\n" +
-                              "- G: Toggle pixel grid (only visible when zoomed in 8x or more)\n" +
-                              "\t- Note that the grid is limited to 32,000 pixels to avoid performance issues.\n" +
-                              "- Up/Down Arrow: Change color format (Hex, RGB, HSV, Float RGB)\n" +
-                              "- Left/Right Arrow: Change coordinate format (WIP)\n" + //TODO implement coordinate format change
-                              "- Alt: Hold for magnified view\n" +
-                              "- Alt+LMB: Pick color from image in the active color format\n" +
-                              "- Esc: Terminate the app\n\n" +
-                              "Drag and drop an image file onto the window to load it.\n";
-            RaylibHelpers.DrawTextBoxed(ref _regularFont, helpText,
-                new Rectangle(40, 40, Raylib.GetScreenWidth() - 80, Raylib.GetScreenHeight() - 80), 24, 1,
-                Color.White, true);
+        else {
+            DrawHelp();
         }
+    }
+
+    private static void DrawHelp() {
+        Raylib.DrawRectangle(20, 20, Raylib.GetScreenWidth() - 40, Raylib.GetScreenHeight() - 40, _bg1);
+        Raylib.DrawRectangleLinesEx(
+            new Rectangle(20, 20, Raylib.GetScreenWidth() - 40, Raylib.GetScreenHeight() - 40), 2, Color.White);
+        string helpText = "Welcome to rChannelViewer!\n\n" +
+                          "Controls:\n" +
+                          "- F1: Toggle this help\n" +
+                          "- Mouse Wheel: Zoom in/out\n" +
+                          "- Left Mouse Button: Pan\n" +
+                          "- Right Mouse Button: Jump to pixel under mouse\n" +
+                          "- Space: Recenter view\n" +
+                          "- 1/2/3/4/5: Switch to Red/Green/Blue/Alpha/Full channel view\n" +
+                          "- G: Toggle pixel grid (only visible when zoomed in 8x or more)\n" +
+                          "\t- Note that the grid is limited to 32,000 pixels to avoid performance issues.\n" +
+                          "- Up/Down Arrow: Change color format (Hex, RGB, HSV, Float RGB)\n" +
+                          "- Left/Right Arrow: Change coordinate format (WIP)\n" +
+                          "- Alt: Hold for magnified view\n" +
+                          "- Alt+LMB: Pick color from image in the active color format\n" +
+                          "- Esc: Terminate the app\n\n" +
+                          "Drag and drop an image file onto the window to load it.\n";
+        RaylibHelpers.DrawTextBoxed(ref _regularFont, helpText,
+            new Rectangle(40, 40, Raylib.GetScreenWidth() - 80, Raylib.GetScreenHeight() - 80), 24, 1,
+            Color.White, true);
     }
 
     private static string CoordText(Vector2 pixelPos){
