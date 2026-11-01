@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Windows.Forms;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.JavaScript;
 using System.Text.Json;
 
@@ -312,7 +313,7 @@ public static class Program{
         DrawBackground();
         Raylib.BeginMode2D(_cam);
         Raylib.DrawTexture(_channels[_channelMode], 0, 0, Color.White);
-        if (_cam.Zoom >= 4.0f && _gridToggle) 
+        if (_cam.Zoom >= 8.0f && _gridToggle) 
             DrawGrid();
         Raylib.EndMode2D();
         DrawUserInterface();
@@ -325,19 +326,57 @@ public static class Program{
 
     private static void DrawGrid(){
         //Draws a pixelgrid if zoom is at least x4 and G key is held 
-        float leftmostpixel = MathF.Max((int)(_cam.Target.X - Raylib.GetScreenWidth() / 2 / _cam.Zoom), 0);
+        float leftmostPixel = MathF.Max((int)(_cam.Target.X - Raylib.GetScreenWidth() / 2 / _cam.Zoom), 0);
         float rightmostpixel = MathF.Min((int)(_cam.Target.X + Raylib.GetScreenWidth() / 2 / _cam.Zoom), _image.Width);
-        float topmostpixel = MathF.Max((int)(_cam.Target.Y - Raylib.GetScreenHeight() / 2 / _cam.Zoom), 0);
-        float bottommostpixel =
+        float topmostPixel = MathF.Max((int)(_cam.Target.Y - Raylib.GetScreenHeight() / 2 / _cam.Zoom), 0);
+        float bottommostPixel =
             MathF.Min((int)(_cam.Target.Y + Raylib.GetScreenHeight() / 2 / _cam.Zoom), _image.Height);
-        for (float x = leftmostpixel; x < rightmostpixel; x++){
-            for (float y = topmostpixel; y < bottommostpixel; y++){
+        while ((rightmostpixel - leftmostPixel)*(bottommostPixel - topmostPixel) > 32_000){
+            leftmostPixel += 1;
+            rightmostpixel -= 1;
+            topmostPixel += 1;
+            bottommostPixel -= 1;
+        }
+        for (float x = leftmostPixel; x < rightmostpixel; x++){
+            for (float y = topmostPixel; y < bottommostPixel; y++){
                 {
+                    Color contrastColor = GetContrastColor(GetPixelColorChannelModeSensetive((int)x, (int)y));
+                    float alpha = _cam.Zoom / 32;
                     Raylib.DrawRectangleLinesEx(new Rectangle(x, y, 1, 1), 1 / _cam.Zoom,
-                        Raylib.ColorAlpha(Color.Gray, 0.5f));
+                        Raylib.ColorAlpha(contrastColor, alpha));
                 }
             }
         }
+    }
+
+    private static Color GetPixelColorChannelModeSensetive(int x, int y) {
+        if (_channelMode == 0)
+            return Raylib.GetImageColor(_image, x, y);
+        byte channelValue;
+        switch (_channelMode) {
+            // Return a grayscale color based on the selected channel
+            case 1: // Red
+                channelValue = Raylib.GetImageColor(_image, x, y).R;
+                return new Color(channelValue, channelValue, channelValue, (byte)255);
+            case 2: // Green
+                channelValue = Raylib.GetImageColor(_image, x, y).G;
+                return new Color(channelValue, channelValue, channelValue, (byte)255);
+            case 3: // Blue
+                channelValue = Raylib.GetImageColor(_image, x, y).B;
+                return new Color(channelValue, channelValue, channelValue, (byte)255);
+            case 4: // Alpha
+                channelValue = Raylib.GetImageColor(_image, x, y).A;
+                return new Color(channelValue, channelValue, channelValue, (byte)255);
+        }
+        throw new ArgumentException("Invalid channel mode");
+    }
+
+    private static Color GetContrastColor(Color pixelColor) {
+        Vector3 asHSV = Raylib.ColorToHSV(pixelColor);
+        Color directInverse = new Color((byte)(255 - pixelColor.R), (byte)(255 - pixelColor.G), (byte)(255 - pixelColor.B), (byte)255);
+        float t = MathF.Abs(asHSV.Z - 0.5f) * 2; // t = 0 when value is 0.5, t = 1 when value is 0 or 1
+        Color finalColor = Raylib.ColorLerp(Color.Black, directInverse, t);
+        return finalColor;
     }
 
     private static void DrawUserInterface(){
