@@ -450,7 +450,8 @@ public static class Program{
                               "- Right Mouse Button: Jump to pixel under mouse\n" +
                               "- Space: Recenter view\n" +
                               "- 1/2/3/4/5: Switch to Red/Green/Blue/Alpha/Full channel view\n" +
-                              "- G: Toggle pixel grid (only visible when zoomed in 4x or more)\n" +
+                              "- G: Toggle pixel grid (only visible when zoomed in 8x or more)\n" +
+                              "\t- Note that the grid is limited to 32,000 pixels to avoid performance issues.\n" +
                               "- Up/Down Arrow: Change color format (Hex, RGB, HSV, Float RGB)\n" +
                               "- Left/Right Arrow: Change coordinate format (WIP)\n" + //TODO implement coordinate format change
                               "- Alt: Hold for magnified view\n" +
